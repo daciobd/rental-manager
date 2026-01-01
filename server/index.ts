@@ -86,7 +86,15 @@ app.use((req, res, next) => {
   }
 
   // Executar migrations ao iniciar
-  await runMigrations();
+  try {
+    console.log('Iniciando migrations...');
+    await runMigrations();
+    console.log('Migrations concluídas com sucesso!');
+  } catch (error) {
+    console.error('ERRO CRÍTICO ao executar migrations:', error);
+    console.error('Stack trace:', error instanceof Error ? error.stack : 'N/A');
+    // Não abortar o servidor, mas logar o erro
+  }
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
   // Other ports are firewalled. Default to 5000 if not specified.
