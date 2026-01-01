@@ -1,0 +1,1634 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestão de Aluguéis</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            padding: 15px 30px;
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .tab:hover {
+            background: rgba(255, 255, 255, 1);
+            transform: translateY(-2px);
+        }
+
+        .tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .content {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+
+        .content.active {
+            display: block;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+
+        input, select, textarea {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin-top: 20px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            margin-left: 10px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .card-title {
+            font-size: 1.2em;
+            color: #333;
+            font-weight: 700;
+        }
+
+        .card-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .info-label {
+            color: #999;
+            font-size: 0.85em;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            color: #333;
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+
+        .status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .status-pago {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-pendente {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-atrasado {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .dashboard-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .dashboard-card h3 {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+
+        .dashboard-card .value {
+            font-size: 2em;
+            font-weight: 700;
+        }
+
+        .recibo {
+            background: white;
+            padding: 40px;
+            border: 2px solid #333;
+            max-width: 800px;
+            margin: 20px auto;
+        }
+
+        .recibo-header {
+            text-align: center;
+            border-bottom: 2px solid #333;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        .recibo-header h2 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .recibo-body {
+            line-height: 1.8;
+            font-size: 1.1em;
+        }
+
+        .recibo-footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #333;
+        }
+
+        .assinatura {
+            margin-top: 60px;
+            text-align: center;
+            border-top: 1px solid #333;
+            padding-top: 10px;
+            max-width: 300px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        th {
+            background: #f5f5f5;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 0.9em;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .btn-small:hover {
+            background: #5568d3;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+            .container > *:not(.recibo) {
+                display: none;
+            }
+            .recibo {
+                border: none;
+            }
+        }
+
+        .fiscal-summary {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+        }
+
+        .fiscal-summary h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .highlight {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            border-left: 4px solid #ffc107;
+        }
+
+        .demo-banner {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(245, 87, 108, 0.3);
+        }
+
+        .demo-banner h3 {
+            margin-bottom: 10px;
+        }
+
+        .demo-banner button {
+            background: white;
+            color: #f5576c;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+
+        .demo-banner button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏠 Sistema de Gestão de Aluguéis</h1>
+            <p>Controle completo de recebimentos, recibos e impostos</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('dashboard')">Dashboard</button>
+            <button class="tab" onclick="showTab('imoveis')">Imóveis</button>
+            <button class="tab" onclick="showTab('contratos')">Contratos</button>
+            <button class="tab" onclick="showTab('recebimentos')">Recebimentos</button>
+            <button class="tab" onclick="showTab('impostos')">Impostos</button>
+            <button class="tab" onclick="showTab('relatorios')">Relatórios</button>
+        </div>
+
+        <!-- Dashboard -->
+        <div id="dashboard" class="content active">
+            <div class="demo-banner" id="demoBanner">
+                <h3>🎯 Sistema Vazio? Carregue Dados de Demonstração!</h3>
+                <p style="margin: 10px 0;">Clique no botão abaixo para carregar dados de exemplo e testar todas as funcionalidades</p>
+                <button onclick="carregarDadosDemo()">📊 Carregar Dados de Demonstração</button>
+                <button onclick="limparTodosDados()" style="background: #dc3545; color: white;">🗑️ Limpar Todos os Dados</button>
+            </div>
+
+            <div class="dashboard">
+                <div class="dashboard-card">
+                    <h3>Total de Imóveis</h3>
+                    <div class="value" id="totalImoveis">0</div>
+                </div>
+                <div class="dashboard-card">
+                    <h3>Contratos Ativos</h3>
+                    <div class="value" id="contratosAtivos">0</div>
+                </div>
+                <div class="dashboard-card">
+                    <h3>Recebido no Mês</h3>
+                    <div class="value" id="recebidoMes">R$ 0,00</div>
+                </div>
+                <div class="dashboard-card">
+                    <h3>Pendente no Mês</h3>
+                    <div class="value" id="pendenteMes">R$ 0,00</div>
+                </div>
+            </div>
+
+            <h2 style="margin-bottom: 20px;">Próximos Vencimentos</h2>
+            <div id="proximosVencimentos"></div>
+        </div>
+
+        <!-- Imóveis -->
+        <div id="imoveis" class="content">
+            <h2 style="margin-bottom: 20px;">Cadastro de Imóveis</h2>
+            <form id="formImovel" onsubmit="cadastrarImovel(event)">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Endereço:</label>
+                        <input type="text" id="endereco" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Tipo:</label>
+                        <select id="tipo" required>
+                            <option value="">Selecione</option>
+                            <option value="apartamento">Apartamento</option>
+                            <option value="casa">Casa</option>
+                            <option value="comercial">Comercial</option>
+                            <option value="terreno">Terreno</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Proprietário:</label>
+                        <input type="text" id="proprietario" required>
+                    </div>
+                    <div class="form-group">
+                        <label>CPF/CNPJ:</label>
+                        <input type="text" id="cpfCnpj" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Tipo de Pessoa:</label>
+                        <select id="tipoPessoa" required>
+                            <option value="pf">Pessoa Física</option>
+                            <option value="pj">Pessoa Jurídica</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Valor do Aluguel:</label>
+                        <input type="number" id="valorAluguel" step="0.01" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn">Cadastrar Imóvel</button>
+            </form>
+
+            <h2 style="margin-top: 40px; margin-bottom: 20px;">Imóveis Cadastrados</h2>
+            <div id="listaImoveis"></div>
+        </div>
+
+        <!-- Contratos -->
+        <div id="contratos" class="content">
+            <h2 style="margin-bottom: 20px;">Cadastro de Contratos</h2>
+            <form id="formContrato" onsubmit="cadastrarContrato(event)">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Imóvel:</label>
+                        <select id="contratoImovel" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Locatário:</label>
+                        <input type="text" id="locatario" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Tipo Locatário:</label>
+                        <select id="tipoLocatario" required>
+                            <option value="pf">Pessoa Física</option>
+                            <option value="pj">Pessoa Jurídica</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>CPF/CNPJ Locatário:</label>
+                        <input type="text" id="cpfLocatario" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Data Início:</label>
+                        <input type="date" id="dataInicio" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Dia de Vencimento:</label>
+                        <input type="number" id="diaVencimento" min="1" max="31" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Taxa de Administração (%):</label>
+                        <input type="number" id="taxaAdm" step="0.01" value="10" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Imobiliária:</label>
+                        <input type="text" id="imobiliaria">
+                    </div>
+                </div>
+                <button type="submit" class="btn">Cadastrar Contrato</button>
+            </form>
+
+            <h2 style="margin-top: 40px; margin-bottom: 20px;">Contratos Ativos</h2>
+            <div id="listaContratos"></div>
+        </div>
+
+        <!-- Recebimentos -->
+        <div id="recebimentos" class="content">
+            <h2 style="margin-bottom: 20px;">Registrar Recebimento</h2>
+            <form id="formRecebimento" onsubmit="registrarRecebimento(event)">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Contrato:</label>
+                        <select id="recebimentoContrato" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Data de Pagamento:</label>
+                        <input type="date" id="dataPagamento" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Valor Pago:</label>
+                        <input type="number" id="valorPago" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Referência (Mês/Ano):</label>
+                        <input type="month" id="referenciaRecebimento" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn">Registrar Recebimento</button>
+                <button type="button" class="btn btn-secondary" onclick="gerarRecibo()">Gerar Recibo</button>
+            </form>
+
+            <h2 style="margin-top: 40px; margin-bottom: 20px;">Histórico de Recebimentos</h2>
+            <div id="listaRecebimentos"></div>
+
+            <div id="reciboContainer" style="display: none;">
+                <div class="recibo" id="recibo">
+                    <div class="recibo-header">
+                        <h2>RECIBO DE ALUGUEL</h2>
+                        <p>Nº <span id="reciboNumero"></span></p>
+                    </div>
+                    <div class="recibo-body">
+                        <p><strong>Locador:</strong> <span id="reciboLocador"></span></p>
+                        <p><strong>CPF/CNPJ:</strong> <span id="reciboCpfLocador"></span></p>
+                        <p style="margin-top: 20px;"><strong>Locatário:</strong> <span id="reciboLocatario"></span></p>
+                        <p><strong>Tipo:</strong> <span id="reciboTipoLocatario"></span></p>
+                        <p><strong>CPF/CNPJ:</strong> <span id="reciboCpfLocatario"></span></p>
+                        <p style="margin-top: 20px;"><strong>Endereço do Imóvel:</strong> <span id="reciboEndereco"></span></p>
+                        <p style="margin-top: 20px;"><strong>Referente ao período:</strong> <span id="reciboReferencia"></span></p>
+                        <p style="margin-top: 20px;"><strong>Valor do Aluguel:</strong> <span id="reciboValorAluguel"></span></p>
+                        <p><strong>Taxa de Administração:</strong> <span id="reciboTaxaAdm"></span></p>
+                        <p id="reciboIrRetido" style="display: none;"><strong>IR Retido na Fonte:</strong> <span id="reciboIrRetidoValor" style="color: #dc3545;"></span></p>
+                        <p style="font-size: 1.3em; margin-top: 10px;"><strong>Valor Líquido Recebido:</strong> <span id="reciboValorLiquido"></span></p>
+                        <p style="margin-top: 20px;">Recebi de <strong><span id="reciboLocatarioTexto"></span></strong> a quantia de <strong><span id="reciboValorExtenso"></span></strong> referente ao aluguel do imóvel acima mencionado.</p>
+                        <p style="margin-top: 20px;">Data do Pagamento: <strong><span id="reciboDataPagamento"></span></strong></p>
+                    </div>
+                    <div class="recibo-footer">
+                        <div class="assinatura">
+                            <p>_________________________________</p>
+                            <p><span id="reciboAssinatura"></span></p>
+                            <p>Locador</p>
+                        </div>
+                    </div>
+                </div>
+                <div style="text-align: center; margin-top: 20px;">
+                    <button class="btn" onclick="imprimirRecibo()">Imprimir Recibo</button>
+                    <button class="btn btn-secondary" onclick="fecharRecibo()">Fechar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Impostos -->
+        <div id="impostos" class="content">
+            <h2 style="margin-bottom: 20px;">Cálculo de Impostos</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Selecione o Proprietário:</label>
+                    <select id="impostosProprietario" onchange="calcularImpostos()">
+                        <option value="">Selecione um proprietário</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Período (Mês/Ano):</label>
+                    <input type="month" id="impostosPeriodo" onchange="calcularImpostos()">
+                </div>
+            </div>
+
+            <div id="resultadoImpostos"></div>
+        </div>
+
+        <!-- Relatórios -->
+        <div id="relatorios" class="content">
+            <h2 style="margin-bottom: 20px;">Relatórios</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Período:</label>
+                    <input type="month" id="relatorioPeriodo">
+                </div>
+                <div class="form-group">
+                    <label>Tipo de Relatório:</label>
+                    <select id="tipoRelatorio">
+                        <option value="geral">Relatório Geral</option>
+                        <option value="proprietario">Por Proprietário</option>
+                        <option value="inadimplencia">Inadimplência</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn" onclick="gerarRelatorio()">Gerar Relatório</button>
+
+            <div id="resultadoRelatorio"></div>
+        </div>
+    </div>
+
+    <script>
+        // Dados em memória
+        let imoveis = JSON.parse(localStorage.getItem('imoveis') || '[]');
+        let contratos = JSON.parse(localStorage.getItem('contratos') || '[]');
+        let recebimentos = JSON.parse(localStorage.getItem('recebimentos') || '[]');
+        let ultimoRecibo = parseInt(localStorage.getItem('ultimoRecibo') || '0');
+
+        // Função para carregar dados de demonstração
+        function carregarDadosDemo() {
+            if (imoveis.length > 0 || contratos.length > 0 || recebimentos.length > 0) {
+                if (!confirm('Já existem dados cadastrados. Deseja substituí-los pelos dados de demonstração?')) {
+                    return;
+                }
+            }
+
+            // Limpa dados existentes
+            imoveis = [];
+            contratos = [];
+            recebimentos = [];
+
+            const hoje = new Date();
+            const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+            const mesAnterior = `${hoje.getFullYear()}-${String(hoje.getMonth()).padStart(2, '0')}`;
+
+            // Imóveis de demonstração
+            imoveis = [
+                {
+                    id: 1001,
+                    endereco: 'Rua das Flores, 123 - Apto 201',
+                    tipo: 'apartamento',
+                    proprietario: 'João Silva',
+                    cpfCnpj: '123.456.789-00',
+                    tipoPessoa: 'pf',
+                    valorAluguel: 2500.00
+                },
+                {
+                    id: 1002,
+                    endereco: 'Av. Paulista, 1000 - Sala 305',
+                    tipo: 'comercial',
+                    proprietario: 'Maria Santos',
+                    cpfCnpj: '987.654.321-00',
+                    tipoPessoa: 'pf',
+                    valorAluguel: 4000.00
+                },
+                {
+                    id: 1003,
+                    endereco: 'Rua Consolação, 500 - Apto 102',
+                    tipo: 'apartamento',
+                    proprietario: 'Imobiliária XYZ Ltda',
+                    cpfCnpj: '12.345.678/0001-90',
+                    tipoPessoa: 'pj',
+                    valorAluguel: 3200.00
+                },
+                {
+                    id: 1004,
+                    endereco: 'Rua Augusta, 750 - Casa',
+                    tipo: 'casa',
+                    proprietario: 'João Silva',
+                    cpfCnpj: '123.456.789-00',
+                    tipoPessoa: 'pf',
+                    valorAluguel: 3500.00
+                }
+            ];
+
+            // Contratos de demonstração
+            contratos = [
+                {
+                    id: 2001,
+                    imovelId: 1001,
+                    imovel: imoveis[0],
+                    locatario: 'Carlos Oliveira',
+                    tipoLocatario: 'pf',
+                    cpfCnpjLocatario: '111.222.333-44',
+                    dataInicio: '2024-01-01',
+                    diaVencimento: 10,
+                    taxaAdm: 10,
+                    imobiliaria: 'Imobiliária Prime',
+                    ativo: true
+                },
+                {
+                    id: 2002,
+                    imovelId: 1002,
+                    imovel: imoveis[1],
+                    locatario: 'Tech Solutions Ltda',
+                    tipoLocatario: 'pj',
+                    cpfCnpjLocatario: '22.333.444/0001-55',
+                    dataInicio: '2024-03-01',
+                    diaVencimento: 15,
+                    taxaAdm: 8,
+                    imobiliaria: 'Imobiliária Prime',
+                    ativo: true
+                },
+                {
+                    id: 2003,
+                    imovelId: 1003,
+                    imovel: imoveis[2],
+                    locatario: 'Ana Costa',
+                    tipoLocatario: 'pf',
+                    cpfCnpjLocatario: '555.666.777-88',
+                    dataInicio: '2024-02-01',
+                    diaVencimento: 5,
+                    taxaAdm: 10,
+                    imobiliaria: 'Imobiliária Star',
+                    ativo: true
+                },
+                {
+                    id: 2004,
+                    imovelId: 1004,
+                    imovel: imoveis[3],
+                    locatario: 'Comercial ABC Ltda',
+                    tipoLocatario: 'pj',
+                    cpfCnpjLocatario: '33.444.555/0001-66',
+                    dataInicio: '2024-01-15',
+                    diaVencimento: 20,
+                    taxaAdm: 10,
+                    imobiliaria: 'Imobiliária Prime',
+                    ativo: true
+                }
+            ];
+
+            // Recebimentos de demonstração
+            // Mês anterior - todos pagos
+            recebimentos = [
+                {
+                    id: 3001,
+                    contratoId: 2001,
+                    contrato: contratos[0],
+                    dataPagamento: `${mesAnterior}-10`,
+                    valorPago: 2500.00,
+                    referencia: mesAnterior,
+                    taxaAdm: 250.00,
+                    irRetidoFonte: 0,
+                    valorLiquido: 2250.00
+                },
+                {
+                    id: 3002,
+                    contratoId: 2002,
+                    contrato: contratos[1],
+                    dataPagamento: `${mesAnterior}-15`,
+                    valorPago: 4000.00,
+                    referencia: mesAnterior,
+                    taxaAdm: 320.00,
+                    irRetidoFonte: 442.60, // IR retido por ser locatário PJ
+                    valorLiquido: 3237.40
+                },
+                {
+                    id: 3003,
+                    contratoId: 2003,
+                    contrato: contratos[2],
+                    dataPagamento: `${mesAnterior}-05`,
+                    valorPago: 3200.00,
+                    referencia: mesAnterior,
+                    taxaAdm: 320.00,
+                    irRetidoFonte: 0,
+                    valorLiquido: 2880.00
+                },
+                {
+                    id: 3004,
+                    contratoId: 2004,
+                    contrato: contratos[3],
+                    dataPagamento: `${mesAnterior}-20`,
+                    valorPago: 3500.00,
+                    referencia: mesAnterior,
+                    taxaAdm: 350.00,
+                    irRetidoFonte: 520.27, // IR retido por ser locatário PJ
+                    valorLiquido: 2629.73
+                }
+            ];
+
+            // Mês atual - alguns pagos
+            recebimentos.push(
+                {
+                    id: 3005,
+                    contratoId: 2001,
+                    contrato: contratos[0],
+                    dataPagamento: `${mesAtual}-10`,
+                    valorPago: 2500.00,
+                    referencia: mesAtual,
+                    taxaAdm: 250.00,
+                    irRetidoFonte: 0,
+                    valorLiquido: 2250.00
+                },
+                {
+                    id: 3006,
+                    contratoId: 2003,
+                    contrato: contratos[2],
+                    dataPagamento: `${mesAtual}-06`,
+                    valorPago: 3200.00,
+                    referencia: mesAtual,
+                    taxaAdm: 320.00,
+                    irRetidoFonte: 0,
+                    valorLiquido: 2880.00
+                }
+            );
+
+            salvarDados();
+            listarImoveis();
+            listarContratos();
+            listarRecebimentos();
+            atualizarDashboard();
+            
+            alert('✅ Dados de demonstração carregados com sucesso!\n\n' +
+                  '📊 4 imóveis cadastrados\n' +
+                  '📝 4 contratos ativos\n' +
+                  '💰 6 recebimentos registrados\n\n' +
+                  'Explore todas as abas para ver as funcionalidades!');
+        }
+
+        // Função para limpar todos os dados
+        function limparTodosDados() {
+            if (!confirm('⚠️ ATENÇÃO: Isso irá apagar TODOS os dados cadastrados!\n\nDeseja realmente continuar?')) {
+                return;
+            }
+
+            if (!confirm('Tem certeza absoluta? Esta ação não pode ser desfeita!')) {
+                return;
+            }
+
+            imoveis = [];
+            contratos = [];
+            recebimentos = [];
+            ultimoRecibo = 0;
+            
+            localStorage.clear();
+            
+            listarImoveis();
+            listarContratos();
+            listarRecebimentos();
+            atualizarDashboard();
+            
+            document.getElementById('resultadoImpostos').innerHTML = '';
+            document.getElementById('resultadoRelatorio').innerHTML = '';
+            
+            alert('✅ Todos os dados foram apagados com sucesso!');
+        }
+
+        // Funções de navegação
+        function showTab(tabName) {
+            document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+            
+            if (tabName === 'dashboard') {
+                atualizarDashboard();
+            } else if (tabName === 'contratos') {
+                carregarImoveisSelect('contratoImovel');
+            } else if (tabName === 'recebimentos') {
+                carregarContratosSelect('recebimentoContrato');
+                listarRecebimentos();
+            } else if (tabName === 'impostos') {
+                carregarProprietarios();
+            }
+        }
+
+        // Cadastro de Imóveis
+        function cadastrarImovel(e) {
+            e.preventDefault();
+            const imovel = {
+                id: Date.now(),
+                endereco: document.getElementById('endereco').value,
+                tipo: document.getElementById('tipo').value,
+                proprietario: document.getElementById('proprietario').value,
+                cpfCnpj: document.getElementById('cpfCnpj').value,
+                tipoPessoa: document.getElementById('tipoPessoa').value,
+                valorAluguel: parseFloat(document.getElementById('valorAluguel').value)
+            };
+            
+            imoveis.push(imovel);
+            salvarDados();
+            listarImoveis();
+            document.getElementById('formImovel').reset();
+            alert('Imóvel cadastrado com sucesso!');
+        }
+
+        function listarImoveis() {
+            const lista = document.getElementById('listaImoveis');
+            lista.innerHTML = imoveis.map(imovel => `
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">${imovel.endereco}</div>
+                        <div class="actions">
+                            <button class="btn-small btn-danger" onclick="excluirImovel(${imovel.id})">Excluir</button>
+                        </div>
+                    </div>
+                    <div class="card-info">
+                        <div class="info-item">
+                            <span class="info-label">Tipo</span>
+                            <span class="info-value">${imovel.tipo}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Proprietário</span>
+                            <span class="info-value">${imovel.proprietario}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">CPF/CNPJ</span>
+                            <span class="info-value">${imovel.cpfCnpj}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Tipo Pessoa</span>
+                            <span class="info-value">${imovel.tipoPessoa === 'pf' ? 'Pessoa Física' : 'Pessoa Jurídica'}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Valor Aluguel</span>
+                            <span class="info-value">R$ ${imovel.valorAluguel.toFixed(2)}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function excluirImovel(id) {
+            if (confirm('Deseja realmente excluir este imóvel?')) {
+                imoveis = imoveis.filter(i => i.id !== id);
+                salvarDados();
+                listarImoveis();
+            }
+        }
+
+        // Cadastro de Contratos
+        function cadastrarContrato(e) {
+            e.preventDefault();
+            const imovelId = parseInt(document.getElementById('contratoImovel').value);
+            const imovel = imoveis.find(i => i.id === imovelId);
+            
+            const contrato = {
+                id: Date.now(),
+                imovelId: imovelId,
+                imovel: imovel,
+                locatario: document.getElementById('locatario').value,
+                tipoLocatario: document.getElementById('tipoLocatario').value,
+                cpfCnpjLocatario: document.getElementById('cpfLocatario').value,
+                dataInicio: document.getElementById('dataInicio').value,
+                diaVencimento: parseInt(document.getElementById('diaVencimento').value),
+                taxaAdm: parseFloat(document.getElementById('taxaAdm').value),
+                imobiliaria: document.getElementById('imobiliaria').value,
+                ativo: true
+            };
+            
+            contratos.push(contrato);
+            salvarDados();
+            listarContratos();
+            document.getElementById('formContrato').reset();
+            alert('Contrato cadastrado com sucesso!');
+        }
+
+        function listarContratos() {
+            const lista = document.getElementById('listaContratos');
+            const contratosAtivos = contratos.filter(c => c.ativo);
+            
+            lista.innerHTML = contratosAtivos.map(contrato => `
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">${contrato.imovel.endereco}</div>
+                        <div class="actions">
+                            <button class="btn-small btn-danger" onclick="encerrarContrato(${contrato.id})">Encerrar</button>
+                        </div>
+                    </div>
+                    <div class="card-info">
+                        <div class="info-item">
+                            <span class="info-label">Locatário</span>
+                            <span class="info-value">${contrato.locatario} (${contrato.tipoLocatario === 'pf' ? 'PF' : 'PJ'})</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Proprietário</span>
+                            <span class="info-value">${contrato.imovel.proprietario} (${contrato.imovel.tipoPessoa === 'pf' ? 'PF' : 'PJ'})</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Valor Aluguel</span>
+                            <span class="info-value">R$ ${contrato.imovel.valorAluguel.toFixed(2)}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Taxa Administração</span>
+                            <span class="info-value">${contrato.taxaAdm}%</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Dia Vencimento</span>
+                            <span class="info-value">Dia ${contrato.diaVencimento}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Imobiliária</span>
+                            <span class="info-value">${contrato.imobiliaria || 'N/A'}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function encerrarContrato(id) {
+            if (confirm('Deseja realmente encerrar este contrato?')) {
+                const contrato = contratos.find(c => c.id === id);
+                contrato.ativo = false;
+                salvarDados();
+                listarContratos();
+            }
+        }
+
+        // Recebimentos
+        function registrarRecebimento(e) {
+            e.preventDefault();
+            const contratoId = parseInt(document.getElementById('recebimentoContrato').value);
+            const contrato = contratos.find(c => c.id === contratoId);
+            const valorPago = parseFloat(document.getElementById('valorPago').value);
+            
+            // Calcula taxa de administração
+            const taxaAdm = contrato.imovel.valorAluguel * (contrato.taxaAdm / 100);
+            
+            // Calcula IR retido na fonte se proprietário PF e locatário PJ
+            let irRetidoFonte = 0;
+            if (contrato.imovel.tipoPessoa === 'pf' && contrato.tipoLocatario === 'pj') {
+                // Tabela de IR sobre aluguel para retenção na fonte
+                const valorBase = valorPago;
+                if (valorBase <= 2112.00) {
+                    irRetidoFonte = 0;
+                } else if (valorBase <= 2826.65) {
+                    irRetidoFonte = (valorBase * 0.075) - 158.40;
+                } else if (valorBase <= 3751.05) {
+                    irRetidoFonte = (valorBase * 0.15) - 370.40;
+                } else if (valorBase <= 4664.68) {
+                    irRetidoFonte = (valorBase * 0.225) - 651.73;
+                } else {
+                    irRetidoFonte = (valorBase * 0.275) - 884.96;
+                }
+                if (irRetidoFonte < 0) irRetidoFonte = 0;
+            }
+            
+            const valorLiquido = valorPago - taxaAdm - irRetidoFonte;
+            
+            const recebimento = {
+                id: Date.now(),
+                contratoId: contratoId,
+                contrato: contrato,
+                dataPagamento: document.getElementById('dataPagamento').value,
+                valorPago: valorPago,
+                referencia: document.getElementById('referenciaRecebimento').value,
+                taxaAdm: taxaAdm,
+                irRetidoFonte: irRetidoFonte,
+                valorLiquido: valorLiquido
+            };
+            
+            recebimentos.push(recebimento);
+            salvarDados();
+            listarRecebimentos();
+            document.getElementById('formRecebimento').reset();
+            alert('Recebimento registrado com sucesso!');
+        }
+
+        function listarRecebimentos() {
+            const lista = document.getElementById('listaRecebimentos');
+            const recebimentosOrdenados = [...recebimentos].sort((a, b) => 
+                new Date(b.dataPagamento) - new Date(a.dataPagamento)
+            );
+            
+            lista.innerHTML = recebimentosOrdenados.map(rec => `
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">${rec.contrato.imovel.endereco}</div>
+                        <span class="status status-pago">PAGO</span>
+                    </div>
+                    <div class="card-info">
+                        <div class="info-item">
+                            <span class="info-label">Locatário</span>
+                            <span class="info-value">${rec.contrato.locatario} (${rec.contrato.tipoLocatario === 'pf' ? 'PF' : 'PJ'})</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Proprietário</span>
+                            <span class="info-value">${rec.contrato.imovel.proprietario} (${rec.contrato.imovel.tipoPessoa === 'pf' ? 'PF' : 'PJ'})</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Referência</span>
+                            <span class="info-value">${formatarMesAno(rec.referencia)}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Data Pagamento</span>
+                            <span class="info-value">${formatarData(rec.dataPagamento)}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Valor Pago</span>
+                            <span class="info-value">R$ ${rec.valorPago.toFixed(2)}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Taxa Administração</span>
+                            <span class="info-value">R$ ${rec.taxaAdm.toFixed(2)}</span>
+                        </div>
+                        ${rec.irRetidoFonte > 0 ? `
+                        <div class="info-item">
+                            <span class="info-label">IR Retido na Fonte</span>
+                            <span class="info-value" style="color: #dc3545;">R$ ${rec.irRetidoFonte.toFixed(2)}</span>
+                        </div>
+                        ` : ''}
+                        <div class="info-item">
+                            <span class="info-label">Valor Líquido</span>
+                            <span class="info-value" style="color: #28a745; font-weight: 700;">R$ ${rec.valorLiquido.toFixed(2)}</span>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <button class="btn-small" onclick="gerarReciboEspecifico(${rec.id})">Gerar Recibo</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function gerarRecibo() {
+            const contratoId = parseInt(document.getElementById('recebimentoContrato').value);
+            if (!contratoId) {
+                alert('Selecione um contrato');
+                return;
+            }
+            
+            const contrato = contratos.find(c => c.id === contratoId);
+            const dataPagamento = document.getElementById('dataPagamento').value;
+            const valorPago = parseFloat(document.getElementById('valorPago').value);
+            const referencia = document.getElementById('referenciaRecebimento').value;
+            
+            preencherRecibo(contrato, dataPagamento, valorPago, referencia);
+        }
+
+        function gerarReciboEspecifico(recebimentoId) {
+            const rec = recebimentos.find(r => r.id === recebimentoId);
+            preencherRecibo(rec.contrato, rec.dataPagamento, rec.valorPago, rec.referencia);
+        }
+
+        function preencherRecibo(contrato, dataPagamento, valorPago, referencia) {
+            ultimoRecibo++;
+            localStorage.setItem('ultimoRecibo', ultimoRecibo.toString());
+            
+            const taxaAdm = contrato.imovel.valorAluguel * (contrato.taxaAdm / 100);
+            
+            // Calcula IR retido na fonte se proprietário PF e locatário PJ
+            let irRetidoFonte = 0;
+            if (contrato.imovel.tipoPessoa === 'pf' && contrato.tipoLocatario === 'pj') {
+                const valorBase = valorPago;
+                if (valorBase <= 2112.00) {
+                    irRetidoFonte = 0;
+                } else if (valorBase <= 2826.65) {
+                    irRetidoFonte = (valorBase * 0.075) - 158.40;
+                } else if (valorBase <= 3751.05) {
+                    irRetidoFonte = (valorBase * 0.15) - 370.40;
+                } else if (valorBase <= 4664.68) {
+                    irRetidoFonte = (valorBase * 0.225) - 651.73;
+                } else {
+                    irRetidoFonte = (valorBase * 0.275) - 884.96;
+                }
+                if (irRetidoFonte < 0) irRetidoFonte = 0;
+            }
+            
+            const valorLiquido = valorPago - taxaAdm - irRetidoFonte;
+            
+            document.getElementById('reciboNumero').textContent = ultimoRecibo.toString().padStart(6, '0');
+            document.getElementById('reciboLocador').textContent = contrato.imovel.proprietario;
+            document.getElementById('reciboCpfLocador').textContent = contrato.imovel.cpfCnpj;
+            document.getElementById('reciboLocatario').textContent = contrato.locatario;
+            document.getElementById('reciboCpfLocatario').textContent = contrato.cpfCnpjLocatario || contrato.cpfLocatario;
+            document.getElementById('reciboTipoLocatario').textContent = contrato.tipoLocatario === 'pf' ? 'Pessoa Física' : 'Pessoa Jurídica';
+            document.getElementById('reciboEndereco').textContent = contrato.imovel.endereco;
+            document.getElementById('reciboReferencia').textContent = formatarMesAno(referencia);
+            document.getElementById('reciboValorAluguel').textContent = `R$ ${contrato.imovel.valorAluguel.toFixed(2)}`;
+            document.getElementById('reciboTaxaAdm').textContent = `R$ ${taxaAdm.toFixed(2)} (${contrato.taxaAdm}%)`;
+            
+            // Mostrar ou ocultar IR retido
+            const irRetidoDiv = document.getElementById('reciboIrRetido');
+            if (irRetidoFonte > 0) {
+                irRetidoDiv.style.display = 'block';
+                document.getElementById('reciboIrRetidoValor').textContent = `R$ ${irRetidoFonte.toFixed(2)}`;
+            } else {
+                irRetidoDiv.style.display = 'none';
+            }
+            
+            document.getElementById('reciboValorLiquido').textContent = `R$ ${valorLiquido.toFixed(2)}`;
+            document.getElementById('reciboLocatarioTexto').textContent = contrato.locatario;
+            document.getElementById('reciboValorExtenso').textContent = `R$ ${valorPago.toFixed(2)}`;
+            document.getElementById('reciboDataPagamento').textContent = formatarData(dataPagamento);
+            document.getElementById('reciboAssinatura').textContent = contrato.imovel.proprietario;
+            
+            document.getElementById('reciboContainer').style.display = 'block';
+            document.getElementById('reciboContainer').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function imprimirRecibo() {
+            window.print();
+        }
+
+        function fecharRecibo() {
+            document.getElementById('reciboContainer').style.display = 'none';
+        }
+
+        // Cálculo de Impostos
+        function calcularImpostos() {
+            const proprietarioNome = document.getElementById('impostosProprietario').value;
+            const periodo = document.getElementById('impostosPeriodo').value;
+            
+            if (!proprietarioNome || !periodo) return;
+            
+            const [ano, mes] = periodo.split('-');
+            const proprietario = imoveis.find(i => i.proprietario === proprietarioNome);
+            
+            const recebimentosProprietario = recebimentos.filter(r => 
+                r.contrato.imovel.proprietario === proprietarioNome &&
+                r.referencia.startsWith(periodo)
+            );
+            
+            const totalRecebido = recebimentosProprietario.reduce((sum, r) => sum + r.valorLiquido, 0);
+            const totalBruto = recebimentosProprietario.reduce((sum, r) => sum + r.valorPago, 0);
+            const totalTaxasAdm = recebimentosProprietario.reduce((sum, r) => sum + r.taxaAdm, 0);
+            
+            // Separa recebimentos por tipo de locatário
+            const recebimentosPF = recebimentosProprietario.filter(r => r.contrato.tipoLocatario === 'pf');
+            const recebimentosPJ = recebimentosProprietario.filter(r => r.contrato.tipoLocatario === 'pj');
+            const totalRecebidoPF = recebimentosPF.reduce((sum, r) => sum + r.valorPago, 0);
+            const totalRecebidoPJ = recebimentosPJ.reduce((sum, r) => sum + r.valorPago, 0);
+            const totalIrRetido = recebimentosPJ.reduce((sum, r) => sum + (r.irRetidoFonte || 0), 0);
+            
+            let impostoRenda = 0;
+            let aliquota = 0;
+            let deducao = 0;
+            let orientacoes = '';
+            
+            if (proprietario.tipoPessoa === 'pf') {
+                // PESSOA FÍSICA
+                
+                if (recebimentosPF.length > 0 && recebimentosPJ.length === 0) {
+                    // Situação 1: Apenas locatários PF - CARNÊ-LEÃO
+                    if (totalRecebidoPF <= 2112.00) {
+                        aliquota = 0;
+                    } else if (totalRecebidoPF <= 2826.65) {
+                        aliquota = 7.5;
+                        deducao = 158.40;
+                    } else if (totalRecebidoPF <= 3751.05) {
+                        aliquota = 15;
+                        deducao = 370.40;
+                    } else if (totalRecebidoPF <= 4664.68) {
+                        aliquota = 22.5;
+                        deducao = 651.73;
+                    } else {
+                        aliquota = 27.5;
+                        deducao = 884.96;
+                    }
+                    
+                    impostoRenda = (totalRecebidoPF * (aliquota / 100)) - deducao;
+                    if (impostoRenda < 0) impostoRenda = 0;
+                    
+                    orientacoes = `
+                        <div class="highlight">
+                            <strong>📋 SITUAÇÃO: Proprietário PF com Locatários PF - CARNÊ-LEÃO</strong><br><br>
+                            <strong>Obrigações:</strong><br>
+                            • Preencher o Carnê-Leão mensalmente no site da Receita Federal<br>
+                            • Prazo: até o último dia útil do mês seguinte ao recebimento<br>
+                            • Gerar DARF com código de receita: 0190<br>
+                            • Vencimento do DARF: último dia útil do mês seguinte<br>
+                            • Informar na Declaração Anual de IR na ficha "Rendimentos Tributáveis Recebidos de PF/Exterior"<br><br>
+                            <strong>Deduções permitidas:</strong><br>
+                            • Até 20% do rendimento bruto com despesas comprovadas<br>
+                            • IPTU, condomínio, seguro do imóvel, reformas e manutenção<br>
+                            • Guarde todos os comprovantes dessas despesas<br><br>
+                            <strong>⚠️ IMPORTANTE:</strong> O IR calculado acima ainda pode ser deduzido das despesas permitidas.
+                        </div>
+                    `;
+                    
+                } else if (recebimentosPF.length === 0 && recebimentosPJ.length > 0) {
+                    // Situação 2: Apenas locatários PJ - IR RETIDO NA FONTE
+                    impostoRenda = totalIrRetido;
+                    
+                    orientacoes = `
+                        <div class="highlight">
+                            <strong>📋 SITUAÇÃO: Proprietário PF com Locatários PJ - IR RETIDO NA FONTE</strong><br><br>
+                            <strong>Como funciona:</strong><br>
+                            • O locatário PJ já reteve e recolheu o IR na fonte no pagamento<br>
+                            • Você NÃO precisa pagar DARF nem preencher Carnê-Leão para esses valores<br>
+                            • O locatário deve fornecer o Comprovante de Retenção (informe de rendimentos)<br><br>
+                            <strong>Obrigações:</strong><br>
+                            • Solicitar ao locatário PJ o Comprovante de Retenção do IR<br>
+                            • Na Declaração Anual de IR, informar na ficha "Rendimentos Tributáveis Recebidos de PJ"<br>
+                            • O IR retido será compensado/restituído na declaração anual<br><br>
+                            <strong>⚠️ IMPORTANTE:</strong> Guarde os comprovantes de retenção fornecidos pelo locatário PJ.<br>
+                            O IR retido na fonte será abatido do imposto total na sua declaração anual.
+                        </div>
+                    `;
+                    
+                } else if (recebimentosPF.length > 0 && recebimentosPJ.length > 0) {
+                    // Situação 3: Mix de locatários PF e PJ
+                    
+                    // Calcula IR sobre os recebimentos de PF (carnê-leão)
+                    if (totalRecebidoPF <= 2112.00) {
+                        aliquota = 0;
+                    } else if (totalRecebidoPF <= 2826.65) {
+                        aliquota = 7.5;
+                        deducao = 158.40;
+                    } else if (totalRecebidoPF <= 3751.05) {
+                        aliquota = 15;
+                        deducao = 370.40;
+                    } else if (totalRecebidoPF <= 4664.68) {
+                        aliquota = 22.5;
+                        deducao = 651.73;
+                    } else {
+                        aliquota = 27.5;
+                        deducao = 884.96;
+                    }
+                    
+                    const irCarneleao = Math.max(0, (totalRecebidoPF * (aliquota / 100)) - deducao);
+                    impostoRenda = irCarneleao + totalIrRetido;
+                    
+                    orientacoes = `
+                        <div class="highlight">
+                            <strong>📋 SITUAÇÃO: Proprietário PF com AMBOS tipos de Locatários</strong><br><br>
+                            <strong>Você tem duas situações simultâneas:</strong><br><br>
+                            
+                            <strong>1️⃣ Para locatários PF (R$ ${totalRecebidoPF.toFixed(2)}):</strong><br>
+                            • Preencher Carnê-Leão mensalmente<br>
+                            • Gerar e pagar DARF código 0190<br>
+                            • IR a pagar via carnê-leão: R$ ${irCarneleao.toFixed(2)}<br><br>
+                            
+                            <strong>2️⃣ Para locatários PJ (R$ ${totalRecebidoPJ.toFixed(2)}):</strong><br>
+                            • IR já foi retido na fonte: R$ ${totalIrRetido.toFixed(2)}<br>
+                            • NÃO precisa pagar DARF para esses valores<br>
+                            • Solicitar comprovantes de retenção<br><br>
+                            
+                            <strong>Na Declaração Anual:</strong><br>
+                            • Informe os rendimentos de PF na ficha "Rendimentos Tributáveis Recebidos de PF"<br>
+                            • Informe os rendimentos de PJ na ficha "Rendimentos Tributáveis Recebidos de PJ"<br>
+                            • O IR retido por PJ será compensado automaticamente
+                        </div>
+                    `;
+                }
+                
+            } else {
+                // PESSOA JURÍDICA - Lucro Presumido (não há carnê-leão)
+                const baseCalculo = totalBruto * 0.32; // 32% de presunção para aluguel
+                const irpj = baseCalculo * 0.15;
+                const csll = baseCalculo * 0.09;
+                const pis = totalBruto * 0.0065;
+                const cofins = totalBruto * 0.03;
+                
+                impostoRenda = irpj + csll + pis + cofins;
+                
+                orientacoes = `
+                    <div class="highlight">
+                        <strong>📋 SITUAÇÃO: Proprietário PESSOA JURÍDICA - Lucro Presumido</strong><br><br>
+                        <strong>⚠️ NÃO HÁ CARNÊ-LEÃO para Pessoa Jurídica!</strong><br><br>
+                        
+                        <strong>Tributos a Recolher:</strong><br>
+                        • IRPJ (15%): R$ ${irpj.toFixed(2)} - DARF até último dia útil do mês seguinte<br>
+                        • CSLL (9%): R$ ${(csll).toFixed(2)} - DARF até último dia útil do mês seguinte<br>
+                        • PIS (0,65%): R$ ${pis.toFixed(2)} - Recolhimento mensal<br>
+                        • COFINS (3%): R$ ${cofins.toFixed(2)} - Recolhimento mensal<br><br>
+                        
+                        <strong>Base de Cálculo:</strong><br>
+                        • Presunção de lucro: 32% sobre receita de aluguel<br>
+                        • Base de cálculo: R$ ${baseCalculo.toFixed(2)}<br><br>
+                        
+                        <strong>Outros tributos:</strong><br>
+                        • ISS pode ser devido (2% a 5%) dependendo do município<br>
+                        • Consulte a legislação municipal<br><br>
+                        
+                        <strong>Obrigações Acessórias:</strong><br>
+                        • Escrituração fiscal (livro caixa)<br>
+                        • Emissão de notas fiscais<br>
+                        • Declarações ao fisco (EFD, DCTF, etc.)
+                    </div>
+                `;
+            }
+            
+            const resultado = document.getElementById('resultadoImpostos');
+            resultado.innerHTML = `
+                <div class="fiscal-summary">
+                    <h3>Resumo Fiscal - ${formatarMesAno(periodo)}</h3>
+                    <div class="card-info" style="margin-top: 20px;">
+                        <div class="info-item">
+                            <span class="info-label">Proprietário</span>
+                            <span class="info-value">${proprietarioNome}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Tipo de Pessoa</span>
+                            <span class="info-value">${proprietario.tipoPessoa === 'pf' ? 'Pessoa Física' : 'Pessoa Jurídica'}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Total Bruto Recebido</span>
+                            <span class="info-value">R$ ${totalBruto.toFixed(2)}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Taxas de Administração</span>
+                            <span class="info-value">R$ ${totalTaxasAdm.toFixed(2)}</span>
+                        </div>
+                        ${proprietario.tipoPessoa === 'pf' && recebimentosPF.length > 0 ? `
+                        <div class="info-item">
+                            <span class="info-label">Recebido de PF (Carnê-Leão)</span>
+                            <span class="info-value">R$ ${totalRecebidoPF.toFixed(2)}</span>
+                        </div>
+                        ` : ''}
+                        ${proprietario.tipoPessoa === 'pf' && recebimentosPJ.length > 0 ? `
+                        <div class="info-item">
+                            <span class="info-label">Recebido de PJ (IR Retido)</span>
+                            <span class="info-value">R$ ${totalRecebidoPJ.toFixed(2)}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">IR Já Retido por PJ</span>
+                            <span class="info-value" style="color: #28a745;">R$ ${totalIrRetido.toFixed(2)}</span>
+                        </div>
+                        ` : ''}
+                        ${proprietario.tipoPessoa === 'pf' && recebimentosPF.length > 0 ? `
+                        <div class="info-item">
+                            <span class="info-label">Alíquota Carnê-Leão</span>
+                            <span class="info-value">${aliquota}%</span>
+                        </div>
+                        ` : ''}
+                        <div class="info-item">
+                            <span class="info-label">Total de Impostos</span>
+                            <span class="info-value" style="color: #dc3545; font-size: 1.3em;">R$ ${impostoRenda.toFixed(2)}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Valor Líquido Final</span>
+                            <span class="info-value" style="color: #28a745; font-size: 1.3em;">R$ ${(totalRecebido - (impostoRenda - totalIrRetido)).toFixed(2)}</span>
+                        </div>
+                    </div>
+                    
+                    ${orientacoes}
+                </div>
+            `;
+        }
+
+        // Dashboard
+        function atualizarDashboard() {
+            document.getElementById('totalImoveis').textContent = imoveis.length;
+            document.getElementById('contratosAtivos').textContent = contratos.filter(c => c.ativo).length;
+            
+            const hoje = new Date();
+            const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+            
+            const recebimentosMes = recebimentos.filter(r => r.referencia === mesAtual);
+            const recebidoMes = recebimentosMes.reduce((sum, r) => sum + r.valorPago, 0);
+            
+            const contratosAtivos = contratos.filter(c => c.ativo);
+            const totalEsperado = contratosAtivos.reduce((sum, c) => sum + c.imovel.valorAluguel, 0);
+            const pendente = totalEsperado - recebidoMes;
+            
+            document.getElementById('recebidoMes').textContent = `R$ ${recebidoMes.toFixed(2)}`;
+            document.getElementById('pendenteMes').textContent = `R$ ${pendente.toFixed(2)}`;
+            
+            // Próximos vencimentos
+            const proximosVenc = document.getElementById('proximosVencimentos');
+            const vencimentos = contratosAtivos.map(c => {
+                const dataVenc = new Date(hoje.getFullYear(), hoje.getMonth(), c.diaVencimento);
+                const recebido = recebimentosMes.some(r => r.contratoId === c.id);
+                return { contrato: c, data: dataVenc, recebido };
+            }).sort((a, b) => a.data - b.data);
+            
+            proximosVenc.innerHTML = vencimentos.map(v => `
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">${v.contrato.imovel.endereco}</div>
+                        <span class="status ${v.recebido ? 'status-pago' : (v.data < hoje ? 'status-atrasado' : 'status-pendente')}">
+                            ${v.recebido ? 'PAGO' : (v.data < hoje ? 'ATRASADO' : 'PENDENTE')}
+                        </span>
+                    </div>
+                    <div class="card-info">
+                        <div class="info-item">
+                            <span class="info-label">Locatário</span>
+                            <span class="info-value">${v.contrato.locatario}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Vencimento</span>
+                            <span class="info-value">Dia ${v.contrato.diaVencimento}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Valor</span>
+                            <span class="info-value">R$ ${v.contrato.imovel.valorAluguel.toFixed(2)}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Relatórios
+        function gerarRelatorio() {
+            const periodo = document.getElementById('relatorioPeriodo').value;
+            const tipo = document.getElementById('tipoRelatorio').value;
+            
+            if (!periodo) {
+                alert('Selecione um período');
+                return;
+            }
+            
+            const resultado = document.getElementById('resultadoRelatorio');
+            let html = '';
+            
+            if (tipo === 'geral') {
+                const recebimentosPeriodo = recebimentos.filter(r => r.referencia === periodo);
+                const totalRecebido = recebimentosPeriodo.reduce((sum, r) => sum + r.valorPago, 0);
+                const totalTaxas = recebimentosPeriodo.reduce((sum, r) => sum + r.taxaAdm, 0);
+                const totalLiquido = recebimentosPeriodo.reduce((sum, r) => sum + r.valorLiquido, 0);
+                
+                html = `
+                    <h2 style="margin-top: 30px;">Relatório Geral - ${formatarMesAno(periodo)}</h2>
+                    <div class="dashboard" style="margin-top: 20px;">
+                        <div class="dashboard-card">
+                            <h3>Total Recebido</h3>
+                            <div class="value">R$ ${totalRecebido.toFixed(2)}</div>
+                        </div>
+                        <div class="dashboard-card">
+                            <h3>Total Taxas</h3>
+                            <div class="value">R$ ${totalTaxas.toFixed(2)}</div>
+                        </div>
+                        <div class="dashboard-card">
+                            <h3>Total Líquido</h3>
+                            <div class="value">R$ ${totalLiquido.toFixed(2)}</div>
+                        </div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Imóvel</th>
+                                <th>Locatário</th>
+                                <th>Valor</th>
+                                <th>Taxa</th>
+                                <th>Líquido</th>
+                                <th>Data Pgto</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${recebimentosPeriodo.map(r => `
+                                <tr>
+                                    <td>${r.contrato.imovel.endereco}</td>
+                                    <td>${r.contrato.locatario}</td>
+                                    <td>R$ ${r.valorPago.toFixed(2)}</td>
+                                    <td>R$ ${r.taxaAdm.toFixed(2)}</td>
+                                    <td>R$ ${r.valorLiquido.toFixed(2)}</td>
+                                    <td>${formatarData(r.dataPagamento)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            }
+            
+            resultado.innerHTML = html;
+        }
+
+        // Funções auxiliares
+        function carregarImoveisSelect(selectId) {
+            const select = document.getElementById(selectId);
+            select.innerHTML = '<option value="">Selecione um imóvel</option>' +
+                imoveis.map(i => `<option value="${i.id}">${i.endereco} - ${i.proprietario}</option>`).join('');
+        }
+
+        function carregarContratosSelect(selectId) {
+            const select = document.getElementById(selectId);
+            const contratosAtivos = contratos.filter(c => c.ativo);
+            select.innerHTML = '<option value="">Selecione um contrato</option>' +
+                contratosAtivos.map(c => `<option value="${c.id}">${c.imovel.endereco} - ${c.locatario}</option>`).join('');
+        }
+
+        function carregarProprietarios() {
+            const select = document.getElementById('impostosProprietario');
+            const proprietarios = [...new Set(imoveis.map(i => i.proprietario))];
+            select.innerHTML = '<option value="">Selecione um proprietário</option>' +
+                proprietarios.map(p => `<option value="${p}">${p}</option>`).join('');
+        }
+
+        function formatarData(data) {
+            return new Date(data + 'T00:00:00').toLocaleDateString('pt-BR');
+        }
+
+        function formatarMesAno(mesAno) {
+            const [ano, mes] = mesAno.split('-');
+            const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
+                          'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+            return `${meses[parseInt(mes) - 1]}/${ano}`;
+        }
+
+        function salvarDados() {
+            localStorage.setItem('imoveis', JSON.stringify(imoveis));
+            localStorage.setItem('contratos', JSON.stringify(contratos));
+            localStorage.setItem('recebimentos', JSON.stringify(recebimentos));
+        }
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', function() {
+            listarImoveis();
+            listarContratos();
+            atualizarDashboard();
+            
+            // Mostra/oculta banner de demonstração
+            const temDados = imoveis.length > 0 || contratos.length > 0 || recebimentos.length > 0;
+            if (temDados) {
+                document.getElementById('demoBanner').style.display = 'none';
+            }
+            
+            // Define data de hoje como padrão
+            const hoje = new Date().toISOString().split('T')[0];
+            document.getElementById('dataPagamento').value = hoje;
+            
+            const mesAtual = new Date().toISOString().slice(0, 7);
+            document.getElementById('referenciaRecebimento').value = mesAtual;
+            document.getElementById('impostosPeriodo').value = mesAtual;
+            document.getElementById('relatorioPeriodo').value = mesAtual;
+        });
+    </script>
+</body>
+</html>
