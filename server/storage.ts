@@ -226,6 +226,8 @@ export class DatabaseStorage implements IStorage {
     
     const thisMonthPayments = allPayments.filter(p => p.referenceMonth === currentMonth);
     
+    const contractsMap = new Map(allContracts.map(c => [c.id, c]));
+    
     const receivedThisMonth = thisMonthPayments
       .filter(p => p.paymentDate)
       .reduce((sum, p) => sum + parseFloat(p.value.toString()), 0);
@@ -234,13 +236,23 @@ export class DatabaseStorage implements IStorage {
       .filter(p => !p.paymentDate)
       .reduce((sum, p) => sum + parseFloat(p.value.toString()), 0);
     
+    // Calculate admin fees for received payments this month
+    const adminFeesThisMonth = thisMonthPayments
+      .filter(p => p.paymentDate)
+      .reduce((sum, p) => {
+        const contract = contractsMap.get(p.contractId);
+        const adminFeePercent = contract?.adminFeePercent ? parseFloat(contract.adminFeePercent.toString()) : 0;
+        return sum + (parseFloat(p.value.toString()) * adminFeePercent / 100);
+      }, 0);
+    
+    const netReceivedThisMonth = receivedThisMonth - adminFeesThisMonth;
+    
     // Get upcoming payments (next 30 days, not paid)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const thirtyDaysLater = new Date(today);
     thirtyDaysLater.setDate(thirtyDaysLater.getDate() + 30);
     
-    const contractsMap = new Map(allContracts.map(c => [c.id, c]));
     const propertiesMap = new Map(allProperties.map(p => [p.id, p]));
     
     const upcomingPayments = allPayments
@@ -265,6 +277,8 @@ export class DatabaseStorage implements IStorage {
       activeContracts: activeContracts.length,
       receivedThisMonth,
       pendingThisMonth,
+      adminFeesThisMonth,
+      netReceivedThisMonth,
       upcomingPayments,
     };
   }

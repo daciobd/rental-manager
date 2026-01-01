@@ -112,5 +112,7 @@ export type DashboardMetrics = {
   activeContracts: number;
   receivedThisMonth: number;
   pendingThisMonth: number;
+  adminFeesThisMonth: number;
+  netReceivedThisMonth: number;
   upcomingPayments: PaymentWithContract[];
 };

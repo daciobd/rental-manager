@@ -180,13 +180,39 @@ function PaymentCard({
             <span className="capitalize">{payment.paymentMethod}</span>
           </div>
         )}
-        <div className="pt-2 border-t">
+        <div className="pt-2 border-t space-y-1">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-sm text-muted-foreground">Valor</span>
-            <span className="font-bold text-lg" data-testid={`payment-value-${payment.id}`}>
+            <span className="text-sm text-muted-foreground">Valor Bruto</span>
+            <span className="font-semibold" data-testid={`payment-value-${payment.id}`}>
               {formatCurrency(payment.value)}
             </span>
           </div>
+          {payment.contract?.adminFeePercent && parseFloat(payment.contract.adminFeePercent.toString()) > 0 && (
+            <>
+              <div className="flex items-center justify-between gap-2 text-sm">
+                <span className="text-muted-foreground">
+                  Taxa Admin ({payment.contract.adminFeePercent}%)
+                </span>
+                <span className="text-destructive">
+                  - {formatCurrency(parseFloat(payment.value.toString()) * parseFloat(payment.contract.adminFeePercent.toString()) / 100)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-medium">Valor Líquido</span>
+                <span className="font-bold text-lg text-green-600 dark:text-green-400" data-testid={`payment-net-value-${payment.id}`}>
+                  {formatCurrency(parseFloat(payment.value.toString()) * (1 - parseFloat(payment.contract.adminFeePercent.toString()) / 100))}
+                </span>
+              </div>
+            </>
+          )}
+          {(!payment.contract?.adminFeePercent || parseFloat(payment.contract.adminFeePercent.toString()) === 0) && (
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm text-muted-foreground">Valor Líquido</span>
+              <span className="font-bold text-lg text-green-600 dark:text-green-400">
+                {formatCurrency(payment.value)}
+              </span>
+            </div>
+          )}
         </div>
         {payment.notes && (
           <p className="text-sm text-muted-foreground pt-2 border-t line-clamp-2">

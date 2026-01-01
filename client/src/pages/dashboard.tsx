@@ -198,7 +198,7 @@ export default function Dashboard() {
   });
 
   const demoDataMutation = useMutation({
-    mutationFn: () => apiRequest("/api/demo-data", { method: "POST" }),
+    mutationFn: () => apiRequest("POST", "/api/demo-data"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
@@ -324,7 +324,7 @@ export default function Dashboard() {
           loading={isLoading}
         />
         <MetricCard
-          title="Recebido no Mês"
+          title="Recebido (Bruto)"
           value={formatCurrency(metrics?.receivedThisMonth ?? 0)}
           icon={DollarSign}
           loading={isLoading}
@@ -338,6 +338,24 @@ export default function Dashboard() {
           variant="warning"
         />
       </div>
+
+      {metrics && (metrics.netReceivedThisMonth !== undefined || metrics.adminFeesThisMonth !== undefined) && (
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          <MetricCard
+            title="Taxa Administração"
+            value={formatCurrency(metrics?.adminFeesThisMonth ?? 0)}
+            icon={FileText}
+            loading={isLoading}
+          />
+          <MetricCard
+            title="Recebido (Líquido)"
+            value={formatCurrency(metrics?.netReceivedThisMonth ?? 0)}
+            icon={TrendingUp}
+            loading={isLoading}
+            variant="success"
+          />
+        </div>
+      )}
 
       <div>
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
