@@ -56,6 +56,8 @@ export const contracts = pgTable("contracts", {
   adjustmentPercent: decimal("adjustment_percent", { precision: 5, scale: 2 }), // para reajuste fixo
   nextAdjustmentDate: text("next_adjustment_date"), // YYYY-MM-DD
   lastAdjustmentDate: text("last_adjustment_date"), // YYYY-MM-DD
+  // Documentos anexados (caminhos de arquivos no object storage)
+  documents: text("documents").array(),
 });
 
 export const insertContractSchema = createInsertSchema(contracts).omit({ id: true });

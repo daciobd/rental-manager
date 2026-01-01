@@ -5,11 +5,15 @@ import { insertPropertySchema, insertContractSchema, insertPaymentSchema } from 
 import { z } from "zod";
 import { generateReceipt } from "./pdf";
 import { sendOverduePaymentNotification, sendPaymentDueSoonNotification } from "./email";
+import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  
+  // Register object storage routes for document uploads
+  registerObjectStorageRoutes(app);
   
   // Dashboard
   app.get("/api/dashboard", async (req, res) => {

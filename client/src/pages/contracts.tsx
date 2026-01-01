@@ -43,7 +43,9 @@ import { ContractStatusBadge } from "@/components/status-badge";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { formatCurrency, formatDate, formatDocument } from "@/lib/utils";
-import { Plus, Pencil, Trash2, FileText, Calendar, User, Mail, Phone, MapPin, Search, Percent, RefreshCw } from "lucide-react";
+import { Plus, Pencil, Trash2, FileText, Calendar, User, Mail, Phone, MapPin, Search, Percent, RefreshCw, Upload, File, X } from "lucide-react";
+import { useUpload } from "@/hooks/use-upload";
+import * as React from "react";
 import type { Contract, ContractWithProperty, Property, InsertContract } from "@shared/schema";
 
 const contractFormSchema = z.object({
@@ -64,6 +66,143 @@ const contractFormSchema = z.object({
 });
 
 type ContractFormData = z.infer<typeof contractFormSchema>;
+
+function DocumentUploadSection({
+  documents,
+  onDocumentsChange,
+}: {
+  documents: string[];
+  onDocumentsChange: (docs: string[]) => void;
+}) {
+  const { uploadFile, isUploading } = useUpload({
+    onSuccess: (response) => {
+      onDocumentsChange([...documents, response.objectPath]);
+    },
+  });
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      await uploadFile(file);
+      e.target.value = "";
+    }
+  };
+
+  const [deleteError, setDeleteError] = React.useState<string | null>(null);
+
+  const handleRemoveDocument = async (index: number) => {
+    const docPath = documents[index];
+    setDeleteError(null);
+    try {
+      const response = await fetch("/api/uploads/delete", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ objectPath: docPath }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        setDeleteError(errorData.error || "Erro ao remover documento do armazenamento");
+        return;
+      }
+      const newDocs = documents.filter((_, i) => i !== index);
+      onDocumentsChange(newDocs);
+    } catch (error) {
+      console.error("Error deleting document from storage:", error);
+      setDeleteError("Erro de conexão ao remover documento");
+    }
+  };
+
+  const getFileName = (path: string) => {
+    const parts = path.split("/");
+    return parts[parts.length - 1] || path;
+  };
+
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleButtonClick = () => {
+    inputRef.current?.click();
+  };
+
+  return (
+    <div className="border-t pt-4 mt-4">
+      <h4 className="font-medium mb-4 text-sm text-muted-foreground">Documentos do Contrato</h4>
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <input
+            ref={inputRef}
+            type="file"
+            className="hidden"
+            onChange={handleFileChange}
+            disabled={isUploading}
+            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+            data-testid="input-upload-document"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isUploading}
+            onClick={handleButtonClick}
+            data-testid="button-upload-document"
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            {isUploading ? "Enviando..." : "Anexar Documento"}
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            PDF, Word ou imagens (max 10MB)
+          </span>
+        </div>
+        
+        {deleteError && (
+          <div className="text-sm text-destructive p-2 bg-destructive/10 rounded-md" data-testid="text-delete-error">
+            {deleteError}
+          </div>
+        )}
+        
+        {documents.length > 0 && (
+          <div className="space-y-2">
+            {documents.map((doc, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between gap-2 p-2 bg-muted rounded-md"
+                data-testid={`document-item-${index}`}
+              >
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <File className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                  <span className="text-sm truncate" data-testid={`text-document-name-${index}`}>
+                    {getFileName(doc)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => window.open(doc, "_blank")}
+                    title="Visualizar"
+                    data-testid={`button-view-document-${index}`}
+                  >
+                    <FileText className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleRemoveDocument(index)}
+                    title="Remover"
+                    data-testid={`button-remove-document-${index}`}
+                  >
+                    <X className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function ContractCard({
   contract,
@@ -179,6 +318,9 @@ function ContractForm({
 }) {
   const { toast } = useToast();
   const isEditing = !!contract;
+  const [uploadedDocuments, setUploadedDocuments] = useState<string[]>(
+    contract?.documents || []
+  );
 
   const form = useForm<ContractFormData>({
     resolver: zodResolver(contractFormSchema),
@@ -238,6 +380,7 @@ function ContractForm({
       adjustmentPercent: data.adjustmentPercent || null,
       nextAdjustmentDate: data.nextAdjustmentDate || null,
       lastAdjustmentDate: null,
+      documents: uploadedDocuments.length > 0 ? uploadedDocuments : null,
     };
     if (isEditing) {
       updateMutation.mutate(payload);
@@ -475,6 +618,11 @@ function ContractForm({
             )}
           />
         </div>
+
+        <DocumentUploadSection 
+          documents={uploadedDocuments} 
+          onDocumentsChange={setUploadedDocuments} 
+        />
 
         <div className="border-t pt-4 mt-4">
           <h4 className="font-medium mb-4 text-sm text-muted-foreground">Reajuste Automático</h4>
