@@ -101,3 +101,4 @@ The system uses Drizzle ORM relations to maintain data consistency:
 - **Endpoint**: POST `/api/payments/:id/notify` - sends payment reminder email
 - **Location**: `server/email.ts`
 - **Environment Variables**: `SENDGRID_API_KEY` or `RESEND_API_KEY`
+- **Note**: User dismissed integration setup - needs to manually add API key as secret if email sending is required
