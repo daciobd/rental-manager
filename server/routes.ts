@@ -267,5 +267,147 @@ export async function registerRoutes(
     }
   });
 
+  // Full backup export as JSON
+  app.get("/api/export/backup", async (req, res) => {
+    try {
+      const properties = await storage.getProperties();
+      const contracts = await storage.getContracts();
+      const payments = await storage.getPayments();
+      
+      const backup = {
+        exportDate: new Date().toISOString(),
+        version: "1.0",
+        data: {
+          properties,
+          contracts,
+          payments
+        }
+      };
+      
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename=backup-alugueis-${new Date().toISOString().split('T')[0]}.json`);
+      res.send(JSON.stringify(backup, null, 2));
+    } catch (error) {
+      res.status(500).json({ error: "Failed to export backup" });
+    }
+  });
+
+  // Load demo data
+  app.post("/api/demo-data", async (req, res) => {
+    try {
+      // Create demo properties
+      const prop1 = await storage.createProperty({
+        address: "Rua das Flores, 123 - Centro, São Paulo/SP",
+        type: "apartamento",
+        owner: "João da Silva",
+        ownerDocument: "123.456.789-00",
+        rentValue: "2500.00",
+        description: "Apartamento 2 quartos, 70m²"
+      });
+      
+      const prop2 = await storage.createProperty({
+        address: "Av. Brasil, 456 - Jardim Europa, São Paulo/SP",
+        type: "casa",
+        owner: "Maria Santos",
+        ownerDocument: "987.654.321-00",
+        rentValue: "3800.00",
+        description: "Casa 3 quartos com quintal"
+      });
+      
+      const prop3 = await storage.createProperty({
+        address: "Rua Comercial, 789 - Centro, São Paulo/SP",
+        type: "comercial",
+        owner: "Pedro Oliveira",
+        ownerDocument: "12.345.678/0001-90",
+        rentValue: "5000.00",
+        description: "Sala comercial 100m²"
+      });
+      
+      // Create demo contracts
+      const today = new Date();
+      const startDate = new Date(today.getFullYear(), today.getMonth() - 6, 1).toISOString().split('T')[0];
+      const endDate = new Date(today.getFullYear() + 2, today.getMonth(), 1).toISOString().split('T')[0];
+      
+      const contract1 = await storage.createContract({
+        propertyId: prop1.id,
+        tenant: "Carlos Pereira",
+        tenantDocument: "111.222.333-44",
+        tenantEmail: "carlos@email.com",
+        tenantPhone: "(11) 99999-1111",
+        startDate,
+        endDate,
+        rentValue: "2500.00",
+        dueDay: 10,
+        status: "active"
+      });
+      
+      const contract2 = await storage.createContract({
+        propertyId: prop2.id,
+        tenant: "Ana Costa",
+        tenantDocument: "555.666.777-88",
+        tenantEmail: "ana@email.com",
+        tenantPhone: "(11) 99999-2222",
+        startDate,
+        endDate,
+        rentValue: "3800.00",
+        dueDay: 15,
+        status: "active"
+      });
+      
+      const contract3 = await storage.createContract({
+        propertyId: prop3.id,
+        tenant: "Tech Solutions Ltda",
+        tenantDocument: "98.765.432/0001-10",
+        tenantEmail: "contato@techsolutions.com",
+        tenantPhone: "(11) 3333-4444",
+        startDate,
+        endDate,
+        rentValue: "5000.00",
+        dueDay: 5,
+        status: "active"
+      });
+      
+      // Create demo payments for last 3 months
+      const contracts = [
+        { contract: contract1, value: "2500.00" },
+        { contract: contract2, value: "3800.00" },
+        { contract: contract3, value: "5000.00" }
+      ];
+      
+      for (let i = 2; i >= 0; i--) {
+        const refDate = new Date(today.getFullYear(), today.getMonth() - i, 1);
+        const refMonth = `${refDate.getFullYear()}-${String(refDate.getMonth() + 1).padStart(2, '0')}`;
+        
+        for (const { contract, value } of contracts) {
+          const dueDate = `${refMonth}-${String(contract.dueDay).padStart(2, '0')}`;
+          const isPaid = i > 0; // Past months are paid
+          
+          await storage.createPayment({
+            contractId: contract.id,
+            referenceMonth: refMonth,
+            dueDate,
+            paymentDate: isPaid ? dueDate : null,
+            value,
+            status: isPaid ? "paid" : "pending",
+            paymentMethod: isPaid ? "pix" : null,
+            notes: null
+          });
+        }
+      }
+      
+      res.json({ 
+        message: "Dados de demonstração carregados com sucesso!",
+        created: {
+          properties: 3,
+          contracts: 3,
+          payments: 9
+        }
+      });
+    } catch (error) {
+      console.error("Error loading demo data:", error);
+      res.status(500).json({ error: "Falha ao carregar dados de demonstração" });
+    }
+  });
+
   return httpServer;
 }

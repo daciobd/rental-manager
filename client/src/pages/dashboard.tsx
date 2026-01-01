@@ -1,11 +1,24 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/status-badge";
-import { Building2, FileText, DollarSign, AlertCircle, Calendar, Download, TrendingUp } from "lucide-react";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Building2, FileText, DollarSign, AlertCircle, Calendar, Download, TrendingUp, Database, Bell, BellRing, Save } from "lucide-react";
 import { formatCurrency, formatDate, getPaymentStatus } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { DashboardMetrics, PaymentWithContract } from "@shared/schema";
 
 function MetricCard({ 
@@ -83,7 +96,99 @@ function UpcomingPaymentCard({ payment }: { payment: PaymentWithContract }) {
 
 type ChartData = { month: string; received: number; pending: number };
 
+function NotificationBanner({ payments }: { payments: PaymentWithContract[] }) {
+  const [dismissed, setDismissed] = useState<string[]>([]);
+  
+  // Helper to parse date as local (avoid timezone issues with YYYY-MM-DD format)
+  const parseLocalDate = (dateStr: string) => {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+  
+  const getTodayLocal = () => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  };
+  
+  const overduePayments = payments.filter(p => {
+    if (dismissed.includes(p.id)) return false;
+    if (p.paymentDate) return false;
+    const dueDate = parseLocalDate(p.dueDate);
+    const today = getTodayLocal();
+    return dueDate < today;
+  });
+  
+  const dueSoonPayments = payments.filter(p => {
+    if (dismissed.includes(p.id)) return false;
+    if (p.paymentDate) return false;
+    const dueDate = parseLocalDate(p.dueDate);
+    const today = getTodayLocal();
+    const threeDaysLater = new Date(today);
+    threeDaysLater.setDate(threeDaysLater.getDate() + 3);
+    return dueDate >= today && dueDate <= threeDaysLater;
+  });
+  
+  if (overduePayments.length === 0 && dueSoonPayments.length === 0) return null;
+  
+  return (
+    <div className="space-y-2">
+      {overduePayments.length > 0 && (
+        <Card className="border-destructive bg-destructive/10">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <BellRing className="h-5 w-5 text-destructive mt-0.5" />
+              <div className="flex-1">
+                <p className="font-semibold text-destructive">
+                  {overduePayments.length} pagamento{overduePayments.length > 1 ? 's' : ''} em atraso!
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {overduePayments.map(p => p.contract?.tenant).join(", ")}
+                </p>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setDismissed(prev => [...prev, ...overduePayments.map(p => p.id)])}
+              >
+                Dispensar
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
+      {dueSoonPayments.length > 0 && (
+        <Card className="border-amber-500 bg-amber-500/10">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <Bell className="h-5 w-5 text-amber-600 dark:text-amber-500 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-semibold text-amber-600 dark:text-amber-500">
+                  {dueSoonPayments.length} pagamento{dueSoonPayments.length > 1 ? 's' : ''} vence{dueSoonPayments.length > 1 ? 'm' : ''} em breve
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {dueSoonPayments.map(p => `${p.contract?.tenant} (${formatDate(p.dueDate)})`).join(", ")}
+                </p>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setDismissed(prev => [...prev, ...dueSoonPayments.map(p => p.id)])}
+              >
+                Dispensar
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
 export default function Dashboard() {
+  const { toast } = useToast();
+  const [showDemoDialog, setShowDemoDialog] = useState(false);
+  
   const { data: metrics, isLoading } = useQuery<DashboardMetrics>({
     queryKey: ["/api/dashboard"],
   });
@@ -92,12 +197,64 @@ export default function Dashboard() {
     queryKey: ["/api/charts/monthly-revenue"],
   });
 
+  const demoDataMutation = useMutation({
+    mutationFn: () => apiRequest("/api/demo-data", { method: "POST" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/contracts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/charts/monthly-revenue"] });
+      toast({
+        title: "Dados carregados",
+        description: "Dados de demonstração foram adicionados com sucesso!",
+      });
+      setShowDemoDialog(false);
+    },
+    onError: () => {
+      toast({
+        title: "Erro",
+        description: "Falha ao carregar dados de demonstração.",
+        variant: "destructive",
+      });
+    }
+  });
+
   const hasUpcomingPayments = metrics?.upcomingPayments && metrics.upcomingPayments.length > 0;
   const hasChartData = chartData && chartData.some(d => d.received > 0 || d.pending > 0);
+  const hasNoData = !isLoading && metrics?.totalProperties === 0;
 
   const handleExportPayments = () => {
     window.open("/api/export/payments", "_blank");
   };
+
+  const handleExportBackup = () => {
+    window.open("/api/export/backup", "_blank");
+    toast({
+      title: "Backup iniciado",
+      description: "O arquivo de backup está sendo baixado.",
+    });
+  };
+
+  // Auto-save reminder - shows toast every 30 minutes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (metrics && metrics.totalProperties > 0) {
+        toast({
+          title: "Lembrete de backup",
+          description: "Recomendamos fazer backup dos seus dados regularmente.",
+          action: (
+            <Button variant="outline" size="sm" onClick={handleExportBackup}>
+              <Save className="h-4 w-4 mr-1" />
+              Baixar
+            </Button>
+          ),
+        });
+      }
+    }, 30 * 60 * 1000); // 30 minutes
+    
+    return () => clearInterval(interval);
+  }, [metrics]);
 
   return (
     <div className="space-y-8">
@@ -108,11 +265,50 @@ export default function Dashboard() {
             Visão geral do seu portfólio de aluguéis
           </p>
         </div>
-        <Button variant="outline" onClick={handleExportPayments} data-testid="button-export-csv">
-          <Download className="h-4 w-4 mr-2" />
-          Exportar CSV
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {hasNoData && (
+            <Button variant="default" onClick={() => setShowDemoDialog(true)} data-testid="button-load-demo">
+              <Database className="h-4 w-4 mr-2" />
+              Carregar Dados Demo
+            </Button>
+          )}
+          <Button variant="outline" onClick={handleExportBackup} data-testid="button-backup">
+            <Save className="h-4 w-4 mr-2" />
+            Backup
+          </Button>
+          <Button variant="outline" onClick={handleExportPayments} data-testid="button-export-csv">
+            <Download className="h-4 w-4 mr-2" />
+            Exportar CSV
+          </Button>
+        </div>
       </div>
+
+      {/* Notification banners */}
+      {hasUpcomingPayments && metrics?.upcomingPayments && (
+        <NotificationBanner payments={metrics.upcomingPayments} />
+      )}
+
+      {/* Demo data confirmation dialog */}
+      <AlertDialog open={showDemoDialog} onOpenChange={setShowDemoDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Carregar dados de demonstração?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Isso irá adicionar 3 imóveis, 3 contratos e 9 pagamentos de exemplo ao sistema.
+              Você pode excluir esses dados depois se desejar.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => demoDataMutation.mutate()}
+              disabled={demoDataMutation.isPending}
+            >
+              {demoDataMutation.isPending ? "Carregando..." : "Carregar Dados"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
