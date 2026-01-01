@@ -3,6 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertPropertySchema, insertContractSchema, insertPaymentSchema } from "@shared/schema";
 import { z } from "zod";
+import { generateReceipt } from "./pdf";
+import { sendOverduePaymentNotification, sendPaymentDueSoonNotification } from "./email";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -289,6 +291,63 @@ export async function registerRoutes(
       res.send(JSON.stringify(backup, null, 2));
     } catch (error) {
       res.status(500).json({ error: "Failed to export backup" });
+    }
+  });
+
+  // Send email notification for overdue payment
+  app.post("/api/payments/:id/notify", async (req, res) => {
+    try {
+      const payment = await storage.getPayment(req.params.id);
+      if (!payment) {
+        return res.status(404).json({ error: "Payment not found" });
+      }
+      if (payment.paymentDate) {
+        return res.status(400).json({ error: "Pagamento já realizado" });
+      }
+      
+      const today = new Date();
+      const dueDate = new Date(payment.dueDate);
+      const isOverdue = dueDate < today;
+      
+      let result;
+      if (isOverdue) {
+        result = await sendOverduePaymentNotification(payment);
+      } else {
+        const daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        result = await sendPaymentDueSoonNotification(payment, daysUntilDue);
+      }
+      
+      if (result.success) {
+        res.json({ message: result.message, emailId: result.emailId });
+      } else {
+        res.status(500).json({ error: result.message });
+      }
+    } catch (error) {
+      console.error("Error sending notification:", error);
+      res.status(500).json({ error: "Failed to send notification" });
+    }
+  });
+
+  // Generate PDF receipt for a payment
+  app.get("/api/payments/:id/receipt", async (req, res) => {
+    try {
+      const payment = await storage.getPayment(req.params.id);
+      if (!payment) {
+        return res.status(404).json({ error: "Payment not found" });
+      }
+      if (!payment.paymentDate) {
+        return res.status(400).json({ error: "Não é possível gerar recibo para pagamento não realizado" });
+      }
+      
+      const pdfBuffer = generateReceipt(payment);
+      
+      const filename = `recibo-${payment.referenceMonth}-${payment.id.slice(0, 8)}.pdf`;
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename=${filename}`);
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("Error generating receipt:", error);
+      res.status(500).json({ error: "Failed to generate receipt" });
     }
   });
 

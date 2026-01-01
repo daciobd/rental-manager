@@ -84,3 +84,20 @@ The system uses Drizzle ORM relations to maintain data consistency:
 - Vite with React plugin
 - Replit-specific plugins for error overlay, cartographer, and dev banner
 - esbuild for server bundling with selective dependency externalization
+
+### Testing
+- **Framework**: Vitest with supertest for API integration tests
+- **Location**: `tests/api.test.ts`
+- **Run tests**: `npx vitest run` or `npx vitest` for watch mode
+- **Coverage**: Properties, Contracts, Payments CRUD, Dashboard, Export, Referential Integrity
+
+### PDF Generation
+- **Library**: PDFKit for server-side PDF generation
+- **Endpoint**: GET `/api/payments/:id/receipt` - generates rent receipt PDF
+- **Location**: `server/pdf.ts`
+
+### Email Notifications
+- **Service**: Supports SendGrid and Resend (configurable via environment variables)
+- **Endpoint**: POST `/api/payments/:id/notify` - sends payment reminder email
+- **Location**: `server/email.ts`
+- **Environment Variables**: `SENDGRID_API_KEY` or `RESEND_API_KEY`

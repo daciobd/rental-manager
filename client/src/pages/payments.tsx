@@ -55,6 +55,8 @@ import {
   CheckCircle,
   Receipt,
   Search,
+  FileDown,
+  Mail,
 } from "lucide-react";
 import type { Payment, PaymentWithContract, ContractWithProperty, InsertPayment } from "@shared/schema";
 
@@ -75,11 +77,15 @@ function PaymentCard({
   onEdit,
   onDelete,
   onMarkPaid,
+  onDownloadReceipt,
+  onSendNotification,
 }: {
   payment: PaymentWithContract;
   onEdit: (payment: PaymentWithContract) => void;
   onDelete: (id: string) => void;
   onMarkPaid: (payment: PaymentWithContract) => void;
+  onDownloadReceipt: (id: string) => void;
+  onSendNotification: (id: string) => void;
 }) {
   const status = getPaymentStatus(payment.dueDate, payment.paymentDate);
   const isPaid = status === "paid";
@@ -93,7 +99,7 @@ function PaymentCard({
           </CardTitle>
           <StatusBadge status={status} />
         </div>
-        <div className="flex gap-1 flex-shrink-0">
+        <div className="flex gap-1 flex-shrink-0 flex-wrap">
           {!isPaid && (
             <Button
               variant="ghost"
@@ -103,6 +109,28 @@ function PaymentCard({
               data-testid={`button-mark-paid-${payment.id}`}
             >
               <CheckCircle className="h-4 w-4 text-green-600" />
+            </Button>
+          )}
+          {isPaid && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onDownloadReceipt(payment.id)}
+              title="Baixar recibo PDF"
+              data-testid={`button-download-receipt-${payment.id}`}
+            >
+              <FileDown className="h-4 w-4 text-blue-600" />
+            </Button>
+          )}
+          {!isPaid && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onSendNotification(payment.id)}
+              title="Enviar lembrete por email"
+              data-testid={`button-send-notification-${payment.id}`}
+            >
+              <Mail className="h-4 w-4 text-orange-600" />
             </Button>
           )}
           <Button
@@ -490,6 +518,24 @@ export default function Payments() {
     }
   };
 
+  const handleDownloadReceipt = (id: string) => {
+    window.open(`/api/payments/${id}/receipt`, "_blank");
+  };
+
+  const notifyMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("POST", `/api/payments/${id}/notify`),
+    onSuccess: () => {
+      toast({ title: "Lembrete enviado com sucesso!" });
+    },
+    onError: () => {
+      toast({ title: "Erro ao enviar lembrete", variant: "destructive" });
+    },
+  });
+
+  const handleSendNotification = (id: string) => {
+    notifyMutation.mutate(id);
+  };
+
   const handleDialogClose = () => {
     setDialogOpen(false);
     setEditingPayment(undefined);
@@ -582,6 +628,8 @@ export default function Payments() {
               onEdit={handleEdit}
               onDelete={handleDelete}
               onMarkPaid={handleMarkPaid}
+              onDownloadReceipt={handleDownloadReceipt}
+              onSendNotification={handleSendNotification}
             />
           ))}
         </div>
