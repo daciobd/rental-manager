@@ -43,7 +43,7 @@ import { ContractStatusBadge } from "@/components/status-badge";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { formatCurrency, formatDate, formatDocument } from "@/lib/utils";
-import { Plus, Pencil, Trash2, FileText, Calendar, User, Mail, Phone, MapPin, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, FileText, Calendar, User, Mail, Phone, MapPin, Search, Percent, RefreshCw } from "lucide-react";
 import type { Contract, ContractWithProperty, Property, InsertContract } from "@shared/schema";
 
 const contractFormSchema = z.object({
@@ -57,6 +57,10 @@ const contractFormSchema = z.object({
   rentValue: z.string().min(1, "Valor do aluguel é obrigatório"),
   dueDay: z.string().min(1, "Dia de vencimento é obrigatório"),
   status: z.enum(["active", "expired", "cancelled"]).default("active"),
+  adminFeePercent: z.string().optional(),
+  adjustmentIndex: z.string().optional(),
+  adjustmentPercent: z.string().optional(),
+  nextAdjustmentDate: z.string().optional(),
 });
 
 type ContractFormData = z.infer<typeof contractFormSchema>;
@@ -138,6 +142,24 @@ function ContractCard({
               {formatCurrency(contract.rentValue)}
             </span>
           </div>
+          {(contract.adminFeePercent || contract.adjustmentIndex) && (
+            <div className="mt-2 pt-2 border-t flex flex-wrap gap-3 text-xs text-muted-foreground">
+              {contract.adminFeePercent && (
+                <span className="flex items-center gap-1">
+                  <Percent className="h-3 w-3" />
+                  Taxa: {contract.adminFeePercent}%
+                </span>
+              )}
+              {contract.adjustmentIndex && (
+                <span className="flex items-center gap-1">
+                  <RefreshCw className="h-3 w-3" />
+                  {contract.adjustmentIndex === "fixo" 
+                    ? `Reajuste: ${contract.adjustmentPercent}%/ano`
+                    : `Reajuste: ${contract.adjustmentIndex}`}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -171,6 +193,10 @@ function ContractForm({
       rentValue: contract?.rentValue?.toString() || "",
       dueDay: contract?.dueDay?.toString() || "5",
       status: (contract?.status as any) || "active",
+      adminFeePercent: contract?.adminFeePercent?.toString() || "",
+      adjustmentIndex: contract?.adjustmentIndex || "",
+      adjustmentPercent: contract?.adjustmentPercent?.toString() || "",
+      nextAdjustmentDate: contract?.nextAdjustmentDate || "",
     },
   });
 
@@ -207,6 +233,11 @@ function ContractForm({
       tenantEmail: data.tenantEmail || null,
       tenantPhone: data.tenantPhone || null,
       dueDay: parseInt(data.dueDay),
+      adminFeePercent: data.adminFeePercent || null,
+      adjustmentIndex: data.adjustmentIndex || null,
+      adjustmentPercent: data.adjustmentPercent || null,
+      nextAdjustmentDate: data.nextAdjustmentDate || null,
+      lastAdjustmentDate: null,
     };
     if (isEditing) {
       updateMutation.mutate(payload);
@@ -420,6 +451,97 @@ function ContractForm({
               </FormItem>
             )}
           />
+        </div>
+
+        <div className="border-t pt-4 mt-4">
+          <h4 className="font-medium mb-4 text-sm text-muted-foreground">Taxa de Administração</h4>
+          <FormField
+            control={form.control}
+            name="adminFeePercent"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Taxa de Administração (%)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="Ex: 10 para 10%"
+                    {...field}
+                    data-testid="input-contract-admin-fee"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="border-t pt-4 mt-4">
+          <h4 className="font-medium mb-4 text-sm text-muted-foreground">Reajuste Automático</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <FormField
+              control={form.control}
+              name="adjustmentIndex"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Índice de Reajuste</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger data-testid="select-adjustment-index">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="">Nenhum</SelectItem>
+                      <SelectItem value="IGPM">IGP-M</SelectItem>
+                      <SelectItem value="IPCA">IPCA</SelectItem>
+                      <SelectItem value="fixo">Percentual Fixo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="adjustmentPercent"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Percentual Fixo (%)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="Ex: 5"
+                      disabled={form.watch("adjustmentIndex") !== "fixo"}
+                      {...field}
+                      data-testid="input-adjustment-percent"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="nextAdjustmentDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Próximo Reajuste</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="date" 
+                      {...field} 
+                      data-testid="input-next-adjustment" 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
         </div>
 
         <div className="flex justify-end gap-2 pt-4">

@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "./lib/queryClient";
+import { QueryClientProvider, useQuery, useMutation } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/lib/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard,
   Building2,
@@ -15,6 +16,7 @@ import {
   Calculator,
   ClipboardList,
   Home,
+  LogOut,
 } from "lucide-react";
 
 import Dashboard from "@/pages/dashboard";
@@ -23,6 +25,7 @@ import Contracts from "@/pages/contracts";
 import Payments from "@/pages/payments";
 import Taxes from "@/pages/taxes";
 import Reports from "@/pages/reports";
+import AuthPage from "@/pages/auth";
 
 const tabs = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -35,6 +38,25 @@ const tabs = [
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState("dashboard");
+
+  const { data: user, isLoading: authLoading, refetch } = useQuery<{ id: string; username: string } | null>({
+    queryKey: ["/api/auth/user"],
+    retry: false,
+    staleTime: 0,
+    queryFn: async () => {
+      const res = await fetch("/api/auth/user", { credentials: "include" });
+      if (res.status === 401) return null;
+      if (!res.ok) throw new Error("Auth check failed");
+      return res.json();
+    },
+  });
+
+  const logoutMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/auth/logout"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    },
+  });
 
   const renderContent = () => {
     switch (activeTab) {
@@ -55,6 +77,18 @@ function AppContent() {
     }
   };
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-muted-foreground">Carregando...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthPage onSuccess={() => refetch()} />;
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -67,11 +101,22 @@ function AppContent() {
               <div className="hidden sm:block">
                 <h1 className="text-lg font-semibold">Gestão de Aluguéis</h1>
                 <p className="text-xs text-muted-foreground">
-                  Controle seus imóveis e recebimentos
+                  Olá, {user.username}
                 </p>
               </div>
             </div>
-            <ThemeToggle />
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={() => logoutMutation.mutate()}
+                disabled={logoutMutation.isPending}
+                data-testid="button-logout"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </header>

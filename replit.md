@@ -36,9 +36,20 @@ The server serves both the API and static frontend assets. In development, Vite 
 
 Core entities:
 - **Properties**: Address, type (apartment/house/commercial/land), owner info, rent value
-- **Contracts**: Links property to tenant with dates, rent amount, due day, status
+- **Contracts**: Links property to tenant with dates, rent amount, due day, status, admin fee, rent adjustment settings
 - **Payments**: Tracks monthly payments with status (paid/pending/overdue)
-- **Users**: Basic authentication structure (username/password)
+- **Users**: Full authentication with passport-local and PostgreSQL session storage
+
+### Authentication
+- **Strategy**: Passport.js with local strategy
+- **Session Storage**: PostgreSQL via connect-pg-simple (table: user_sessions)
+- **Password Security**: scrypt hashing with random salt
+- **Routes**: /api/auth/login, /api/auth/register, /api/auth/logout, /api/auth/user
+- **Frontend**: Login/Register page at client/src/pages/auth.tsx
+
+### Contract Features
+- **Admin Fee**: Optional percentage fee on rent (adminFeePercent)
+- **Rent Adjustment**: Supports IGPM, IPCA, or fixed percentage with next adjustment date tracking
 
 ### Referential Integrity
 The system uses Drizzle ORM relations to maintain data consistency:

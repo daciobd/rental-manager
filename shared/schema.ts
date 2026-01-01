@@ -49,6 +49,13 @@ export const contracts = pgTable("contracts", {
   rentValue: decimal("rent_value", { precision: 10, scale: 2 }).notNull(),
   dueDay: integer("due_day").notNull(), // Day of month for payment
   status: text("status").notNull().default("active"), // active, expired, cancelled
+  // Taxa de administração (percentual sobre o aluguel)
+  adminFeePercent: decimal("admin_fee_percent", { precision: 5, scale: 2 }),
+  // Reajuste automático
+  adjustmentIndex: text("adjustment_index"), // IGPM, IPCA, fixo
+  adjustmentPercent: decimal("adjustment_percent", { precision: 5, scale: 2 }), // para reajuste fixo
+  nextAdjustmentDate: text("next_adjustment_date"), // YYYY-MM-DD
+  lastAdjustmentDate: text("last_adjustment_date"), // YYYY-MM-DD
 });
 
 export const insertContractSchema = createInsertSchema(contracts).omit({ id: true });
