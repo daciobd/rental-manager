@@ -21,6 +21,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Form,
   FormControl,
   FormField,
@@ -33,7 +43,7 @@ import { ContractStatusBadge } from "@/components/status-badge";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { formatCurrency, formatDate, formatDocument } from "@/lib/utils";
-import { Plus, Pencil, Trash2, FileText, Calendar, User, Mail, Phone, MapPin } from "lucide-react";
+import { Plus, Pencil, Trash2, FileText, Calendar, User, Mail, Phone, MapPin, Search } from "lucide-react";
 import type { Contract, ContractWithProperty, Property, InsertContract } from "@shared/schema";
 
 const contractFormSchema = z.object({
@@ -428,6 +438,9 @@ function ContractForm({
 export default function Contracts() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingContract, setEditingContract] = useState<ContractWithProperty | undefined>();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [contractToDelete, setContractToDelete] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
 
   const { data: contracts, isLoading: contractsLoading } = useQuery<ContractWithProperty[]>({
@@ -444,9 +457,20 @@ export default function Contracts() {
       queryClient.invalidateQueries({ queryKey: ["/api/contracts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
       toast({ title: "Contrato excluído com sucesso!" });
+      setDeleteDialogOpen(false);
+      setContractToDelete(null);
     },
-    onError: () => {
-      toast({ title: "Erro ao excluir contrato", variant: "destructive" });
+    onError: (error: any) => {
+      const message = error?.message || "Erro ao excluir contrato";
+      toast({ 
+        title: "Não foi possível excluir", 
+        description: message.includes("pagamentos") 
+          ? "Este contrato possui pagamentos vinculados. Exclua os pagamentos primeiro."
+          : message,
+        variant: "destructive" 
+      });
+      setDeleteDialogOpen(false);
+      setContractToDelete(null);
     },
   });
 
@@ -456,8 +480,13 @@ export default function Contracts() {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm("Tem certeza que deseja excluir este contrato?")) {
-      deleteMutation.mutate(id);
+    setContractToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (contractToDelete) {
+      deleteMutation.mutate(contractToDelete);
     }
   };
 
@@ -466,11 +495,17 @@ export default function Contracts() {
     setEditingContract(undefined);
   };
 
-  const hasContracts = contracts && contracts.length > 0;
+  const filteredContracts = contracts?.filter(contract =>
+    contract.tenant.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    contract.property?.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    contract.status.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const hasContracts = filteredContracts && filteredContracts.length > 0;
   const hasProperties = properties && properties.length > 0;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold mb-2">Contratos</h1>
@@ -514,6 +549,19 @@ export default function Contracts() {
         </Card>
       )}
 
+      {contracts && contracts.length > 0 && (
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por inquilino, endereço ou status..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+            data-testid="input-search-contracts"
+          />
+        </div>
+      )}
+
       {contractsLoading ? (
         <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
@@ -526,7 +574,7 @@ export default function Contracts() {
         </div>
       ) : hasContracts ? (
         <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          {contracts.map((contract) => (
+          {filteredContracts.map((contract) => (
             <ContractCard
               key={contract.id}
               contract={contract}
@@ -535,6 +583,16 @@ export default function Contracts() {
             />
           ))}
         </div>
+      ) : contracts && contracts.length > 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <Search className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="font-semibold text-lg mb-2">Nenhum resultado encontrado</h3>
+            <p className="text-muted-foreground">
+              Tente buscar com outros termos.
+            </p>
+          </CardContent>
+        </Card>
       ) : (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
@@ -554,6 +612,27 @@ export default function Contracts() {
           </CardContent>
         </Card>
       )}
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este contrato? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete-contract">Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete-contract"
+            >
+              {deleteMutation.isPending ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

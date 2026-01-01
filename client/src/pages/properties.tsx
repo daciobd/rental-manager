@@ -22,6 +22,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Form,
   FormControl,
   FormField,
@@ -34,7 +44,7 @@ import { PropertyTypeBadge } from "@/components/property-type-badge";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { formatCurrency, formatDocument } from "@/lib/utils";
-import { Plus, Pencil, Trash2, Building2, MapPin, User, CreditCard } from "lucide-react";
+import { Plus, Pencil, Trash2, Building2, MapPin, User, CreditCard, Search } from "lucide-react";
 import type { Property, InsertProperty } from "@shared/schema";
 
 const propertyFormSchema = z.object({
@@ -321,6 +331,9 @@ function PropertyForm({
 export default function Properties() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<Property | undefined>();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [propertyToDelete, setPropertyToDelete] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
 
   const { data: properties, isLoading } = useQuery<Property[]>({
@@ -333,9 +346,20 @@ export default function Properties() {
       queryClient.invalidateQueries({ queryKey: ["/api/properties"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
       toast({ title: "Imóvel excluído com sucesso!" });
+      setDeleteDialogOpen(false);
+      setPropertyToDelete(null);
     },
-    onError: () => {
-      toast({ title: "Erro ao excluir imóvel", variant: "destructive" });
+    onError: (error: any) => {
+      const message = error?.message || "Erro ao excluir imóvel";
+      toast({ 
+        title: "Não foi possível excluir", 
+        description: message.includes("contratos") 
+          ? "Este imóvel possui contratos vinculados. Exclua os contratos primeiro."
+          : message,
+        variant: "destructive" 
+      });
+      setDeleteDialogOpen(false);
+      setPropertyToDelete(null);
     },
   });
 
@@ -345,8 +369,13 @@ export default function Properties() {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm("Tem certeza que deseja excluir este imóvel?")) {
-      deleteMutation.mutate(id);
+    setPropertyToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (propertyToDelete) {
+      deleteMutation.mutate(propertyToDelete);
     }
   };
 
@@ -355,10 +384,16 @@ export default function Properties() {
     setEditingProperty(undefined);
   };
 
-  const hasProperties = properties && properties.length > 0;
+  const filteredProperties = properties?.filter(property =>
+    property.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    property.owner.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    property.type.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const hasProperties = filteredProperties && filteredProperties.length > 0;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold mb-2">Imóveis</h1>
@@ -388,6 +423,19 @@ export default function Properties() {
         </Dialog>
       </div>
 
+      {properties && properties.length > 0 && (
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por endereço, proprietário ou tipo..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+            data-testid="input-search-properties"
+          />
+        </div>
+      )}
+
       {isLoading ? (
         <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
@@ -400,7 +448,7 @@ export default function Properties() {
         </div>
       ) : hasProperties ? (
         <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          {properties.map((property) => (
+          {filteredProperties.map((property) => (
             <PropertyCard
               key={property.id}
               property={property}
@@ -409,6 +457,16 @@ export default function Properties() {
             />
           ))}
         </div>
+      ) : properties && properties.length > 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <Search className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="font-semibold text-lg mb-2">Nenhum resultado encontrado</h3>
+            <p className="text-muted-foreground">
+              Tente buscar com outros termos.
+            </p>
+          </CardContent>
+        </Card>
       ) : (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
@@ -424,6 +482,27 @@ export default function Properties() {
           </CardContent>
         </Card>
       )}
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este imóvel? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete">Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete"
+            >
+              {deleteMutation.isPending ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

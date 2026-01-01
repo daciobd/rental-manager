@@ -41,6 +41,9 @@ export interface IStorage {
   
   // Dashboard
   getDashboardMetrics(): Promise<DashboardMetrics>;
+  
+  // Charts
+  getMonthlyRevenueData(): Promise<{ month: string; received: number; pending: number }[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -264,6 +267,42 @@ export class DatabaseStorage implements IStorage {
       pendingThisMonth,
       upcomingPayments,
     };
+  }
+
+  // Charts
+  async getMonthlyRevenueData(): Promise<{ month: string; received: number; pending: number }[]> {
+    const allPayments = await db.select().from(payments);
+    
+    // Get last 6 months
+    const months: string[] = [];
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+    }
+    
+    const monthNames: Record<string, string> = {
+      "01": "Jan", "02": "Fev", "03": "Mar", "04": "Abr",
+      "05": "Mai", "06": "Jun", "07": "Jul", "08": "Ago",
+      "09": "Set", "10": "Out", "11": "Nov", "12": "Dez"
+    };
+    
+    return months.map(month => {
+      const monthPayments = allPayments.filter(p => p.referenceMonth === month);
+      const received = monthPayments
+        .filter(p => p.paymentDate)
+        .reduce((sum, p) => sum + parseFloat(p.value.toString()), 0);
+      const pending = monthPayments
+        .filter(p => !p.paymentDate)
+        .reduce((sum, p) => sum + parseFloat(p.value.toString()), 0);
+      
+      const [year, m] = month.split("-");
+      return {
+        month: `${monthNames[m]}/${year.slice(2)}`,
+        received,
+        pending
+      };
+    });
   }
 }
 

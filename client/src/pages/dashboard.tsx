@@ -1,9 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/status-badge";
-import { Building2, FileText, DollarSign, AlertCircle, Calendar } from "lucide-react";
+import { Building2, FileText, DollarSign, AlertCircle, Calendar, Download, TrendingUp } from "lucide-react";
 import { formatCurrency, formatDate, getPaymentStatus } from "@/lib/utils";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import type { DashboardMetrics, PaymentWithContract } from "@shared/schema";
 
 function MetricCard({ 
@@ -79,20 +81,37 @@ function UpcomingPaymentCard({ payment }: { payment: PaymentWithContract }) {
   );
 }
 
+type ChartData = { month: string; received: number; pending: number };
+
 export default function Dashboard() {
   const { data: metrics, isLoading } = useQuery<DashboardMetrics>({
     queryKey: ["/api/dashboard"],
   });
 
+  const { data: chartData, isLoading: chartLoading } = useQuery<ChartData[]>({
+    queryKey: ["/api/charts/monthly-revenue"],
+  });
+
   const hasUpcomingPayments = metrics?.upcomingPayments && metrics.upcomingPayments.length > 0;
+  const hasChartData = chartData && chartData.some(d => d.received > 0 || d.pending > 0);
+
+  const handleExportPayments = () => {
+    window.open("/api/export/payments", "_blank");
+  };
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold mb-2">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Visão geral do seu portfólio de aluguéis
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold mb-2">Dashboard</h1>
+          <p className="text-muted-foreground">
+            Visão geral do seu portfólio de aluguéis
+          </p>
+        </div>
+        <Button variant="outline" onClick={handleExportPayments} data-testid="button-export-csv">
+          <Download className="h-4 w-4 mr-2" />
+          Exportar CSV
+        </Button>
       </div>
 
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
@@ -122,6 +141,52 @@ export default function Dashboard() {
           loading={isLoading}
           variant="warning"
         />
+      </div>
+
+      <div>
+        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+          <TrendingUp className="h-5 w-5" />
+          Receitas Mensais
+        </h2>
+        <Card>
+          <CardContent className="p-4">
+            {chartLoading ? (
+              <Skeleton className="h-64 w-full" />
+            ) : hasChartData ? (
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis dataKey="month" className="text-xs" tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                  <YAxis 
+                    className="text-xs" 
+                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                    tickFormatter={(value) => value >= 1000 ? `R$ ${(value / 1000).toFixed(1)}k` : `R$ ${value}`}
+                  />
+                  <Tooltip 
+                    formatter={(value: number) => formatCurrency(value)}
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))', 
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px'
+                    }}
+                    labelStyle={{ color: 'hsl(var(--foreground))' }}
+                  />
+                  <Legend />
+                  <Bar dataKey="received" name="Recebido" fill="hsl(142.1 76.2% 36.3%)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="pending" name="Pendente" fill="hsl(47.9 95.8% 53.1%)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <TrendingUp className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="font-semibold text-lg mb-2">Sem dados para exibir</h3>
+                <p className="text-muted-foreground">
+                  Adicione pagamentos para visualizar o gráfico.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       <div>

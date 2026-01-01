@@ -22,6 +22,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Form,
   FormControl,
   FormField,
@@ -44,6 +54,7 @@ import {
   MapPin,
   CheckCircle,
   Receipt,
+  Search,
 } from "lucide-react";
 import type { Payment, PaymentWithContract, ContractWithProperty, InsertPayment } from "@shared/schema";
 
@@ -400,6 +411,11 @@ function PaymentForm({
 export default function Payments() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState<PaymentWithContract | undefined>();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [paymentToDelete, setPaymentToDelete] = useState<string | null>(null);
+  const [markPaidDialogOpen, setMarkPaidDialogOpen] = useState(false);
+  const [paymentToMarkPaid, setPaymentToMarkPaid] = useState<PaymentWithContract | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
 
   const { data: payments, isLoading: paymentsLoading } = useQuery<PaymentWithContract[]>({
@@ -416,9 +432,13 @@ export default function Payments() {
       queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
       toast({ title: "Recebimento excluído com sucesso!" });
+      setDeleteDialogOpen(false);
+      setPaymentToDelete(null);
     },
     onError: () => {
       toast({ title: "Erro ao excluir recebimento", variant: "destructive" });
+      setDeleteDialogOpen(false);
+      setPaymentToDelete(null);
     },
   });
 
@@ -433,9 +453,13 @@ export default function Payments() {
       queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
       toast({ title: "Pagamento confirmado!" });
+      setMarkPaidDialogOpen(false);
+      setPaymentToMarkPaid(null);
     },
     onError: () => {
       toast({ title: "Erro ao confirmar pagamento", variant: "destructive" });
+      setMarkPaidDialogOpen(false);
+      setPaymentToMarkPaid(null);
     },
   });
 
@@ -445,14 +469,24 @@ export default function Payments() {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm("Tem certeza que deseja excluir este recebimento?")) {
-      deleteMutation.mutate(id);
+    setPaymentToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (paymentToDelete) {
+      deleteMutation.mutate(paymentToDelete);
     }
   };
 
   const handleMarkPaid = (payment: PaymentWithContract) => {
-    if (confirm("Confirmar recebimento deste pagamento?")) {
-      markPaidMutation.mutate(payment);
+    setPaymentToMarkPaid(payment);
+    setMarkPaidDialogOpen(true);
+  };
+
+  const confirmMarkPaid = () => {
+    if (paymentToMarkPaid) {
+      markPaidMutation.mutate(paymentToMarkPaid);
     }
   };
 
@@ -461,12 +495,18 @@ export default function Payments() {
     setEditingPayment(undefined);
   };
 
-  const hasPayments = payments && payments.length > 0;
+  const filteredPayments = payments?.filter(payment =>
+    payment.contract?.tenant.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    payment.property?.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    payment.referenceMonth.includes(searchTerm)
+  );
+
+  const hasPayments = filteredPayments && filteredPayments.length > 0;
   const activeContracts = contracts?.filter((c) => c.status === "active") || [];
   const hasActiveContracts = activeContracts.length > 0;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold mb-2">Recebimentos</h1>
@@ -510,6 +550,19 @@ export default function Payments() {
         </Card>
       )}
 
+      {payments && payments.length > 0 && (
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por inquilino, endereço ou mês..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+            data-testid="input-search-payments"
+          />
+        </div>
+      )}
+
       {paymentsLoading ? (
         <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
@@ -522,7 +575,7 @@ export default function Payments() {
         </div>
       ) : hasPayments ? (
         <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          {payments.map((payment) => (
+          {filteredPayments.map((payment) => (
             <PaymentCard
               key={payment.id}
               payment={payment}
@@ -532,6 +585,16 @@ export default function Payments() {
             />
           ))}
         </div>
+      ) : payments && payments.length > 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <Search className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="font-semibold text-lg mb-2">Nenhum resultado encontrado</h3>
+            <p className="text-muted-foreground">
+              Tente buscar com outros termos.
+            </p>
+          </CardContent>
+        </Card>
       ) : (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
@@ -551,6 +614,48 @@ export default function Payments() {
           </CardContent>
         </Card>
       )}
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este recebimento? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete-payment">Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete-payment"
+            >
+              {deleteMutation.isPending ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={markPaidDialogOpen} onOpenChange={setMarkPaidDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar recebimento</AlertDialogTitle>
+            <AlertDialogDescription>
+              Confirmar que este pagamento foi recebido? A data de pagamento será registrada como hoje.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-mark-paid">Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmMarkPaid}
+              className="bg-green-600 text-white hover:bg-green-700"
+              data-testid="button-confirm-mark-paid"
+            >
+              {markPaidMutation.isPending ? "Confirmando..." : "Confirmar Pagamento"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

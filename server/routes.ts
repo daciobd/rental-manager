@@ -230,5 +230,42 @@ export async function registerRoutes(
     }
   });
 
+  // Chart data - Monthly revenue for last 6 months
+  app.get("/api/charts/monthly-revenue", async (req, res) => {
+    try {
+      const chartData = await storage.getMonthlyRevenueData();
+      res.json(chartData);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch chart data" });
+    }
+  });
+
+  // Export payments as CSV
+  app.get("/api/export/payments", async (req, res) => {
+    try {
+      const payments = await storage.getPayments();
+      const csvHeader = "Mês Referência,Inquilino,Imóvel,Valor,Vencimento,Data Pagamento,Status,Forma Pagamento\n";
+      const csvRows = payments.map(p => {
+        const status = p.paymentDate ? "Pago" : (new Date(p.dueDate) < new Date() ? "Atrasado" : "Pendente");
+        return [
+          p.referenceMonth,
+          p.contract?.tenant || "",
+          p.property?.address || "",
+          p.value,
+          p.dueDate,
+          p.paymentDate || "",
+          status,
+          p.paymentMethod || ""
+        ].map(v => `"${v}"`).join(",");
+      }).join("\n");
+      
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", "attachment; filename=recebimentos.csv");
+      res.send("\uFEFF" + csvHeader + csvRows);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to export payments" });
+    }
+  });
+
   return httpServer;
 }
