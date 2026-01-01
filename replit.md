@@ -32,7 +32,10 @@ The server serves both the API and static frontend assets. In development, Vite 
 - **Database**: PostgreSQL
 - **ORM**: Drizzle ORM with Zod schema integration (drizzle-zod)
 - **Schema Location**: `shared/schema.ts` (shared between client and server)
-- **Migrations**: Drizzle Kit with `db:push` command
+- **Migrations**: Drizzle Kit with automatic migrations on server startup
+  - Migrations are stored in `./migrations` folder
+  - On startup, `server/migrate.ts` runs pending migrations automatically
+  - If no migrations exist, use `npm run db:push` for development sync
 
 Core entities:
 - **Properties**: Address, type (apartment/house/commercial/land), owner info, rent value
