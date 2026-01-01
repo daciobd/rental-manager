@@ -1,28 +1,131 @@
-import { Switch, Route } from "wouter";
+import { useState } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/not-found";
+import { ThemeProvider } from "@/lib/theme-provider";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import {
+  LayoutDashboard,
+  Building2,
+  FileText,
+  DollarSign,
+  Calculator,
+  ClipboardList,
+  Home,
+} from "lucide-react";
 
-function Router() {
+import Dashboard from "@/pages/dashboard";
+import Properties from "@/pages/properties";
+import Contracts from "@/pages/contracts";
+import Payments from "@/pages/payments";
+import Taxes from "@/pages/taxes";
+import Reports from "@/pages/reports";
+
+const tabs = [
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "imoveis", label: "Imóveis", icon: Building2 },
+  { id: "contratos", label: "Contratos", icon: FileText },
+  { id: "recebimentos", label: "Recebimentos", icon: DollarSign },
+  { id: "impostos", label: "Impostos", icon: Calculator },
+  { id: "relatorios", label: "Relatórios", icon: ClipboardList },
+];
+
+function AppContent() {
+  const [activeTab, setActiveTab] = useState("dashboard");
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case "dashboard":
+        return <Dashboard />;
+      case "imoveis":
+        return <Properties />;
+      case "contratos":
+        return <Contracts />;
+      case "recebimentos":
+        return <Payments />;
+      case "impostos":
+        return <Taxes />;
+      case "relatorios":
+        return <Reports />;
+      default:
+        return <Dashboard />;
+    }
+  };
+
   return (
-    <Switch>
-      {/* Add pages below */}
-      {/* <Route path="/" component={Home}/> */}
-      {/* Fallback to 404 */}
-      <Route component={NotFound} />
-    </Switch>
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary rounded-md">
+                <Home className="h-5 w-5 text-primary-foreground" />
+              </div>
+              <div className="hidden sm:block">
+                <h1 className="text-lg font-semibold">Gestão de Aluguéis</h1>
+                <p className="text-xs text-muted-foreground">
+                  Controle seus imóveis e recebimentos
+                </p>
+              </div>
+            </div>
+            <ThemeToggle />
+          </div>
+        </div>
+      </header>
+
+      <nav className="sticky top-16 z-40 w-full border-b bg-background">
+        <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <ScrollArea className="w-full whitespace-nowrap">
+              <TabsList className="inline-flex h-12 w-full justify-start gap-1 bg-transparent p-0">
+                {tabs.map((tab) => {
+                  const Icon = tab.icon;
+                  return (
+                    <TabsTrigger
+                      key={tab.id}
+                      value={tab.id}
+                      className="relative h-12 rounded-none border-b-2 border-b-transparent bg-transparent px-4 pb-3 pt-2 font-medium text-muted-foreground transition-none data-[state=active]:border-b-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                      data-testid={`tab-${tab.id}`}
+                    >
+                      <Icon className="h-4 w-4 mr-2" />
+                      <span className="hidden sm:inline">{tab.label}</span>
+                    </TabsTrigger>
+                  );
+                })}
+              </TabsList>
+              <ScrollBar orientation="horizontal" className="invisible" />
+            </ScrollArea>
+          </Tabs>
+        </div>
+      </nav>
+
+      <main className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {renderContent()}
+      </main>
+
+      <footer className="border-t py-6 mt-auto">
+        <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <p className="text-center text-sm text-muted-foreground">
+            Sistema de Gestão de Aluguéis - Controle completo de recebimentos, recibos e impostos
+          </p>
+        </div>
+      </footer>
+    </div>
   );
 }
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
+      <ThemeProvider>
+        <TooltipProvider>
+          <Toaster />
+          <AppContent />
+        </TooltipProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

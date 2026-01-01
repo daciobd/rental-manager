@@ -1,5 +1,5 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
+import { sql, relations } from "drizzle-orm";
+import { pgTable, text, varchar, integer, decimal } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -16,3 +16,94 @@ export const insertUserSchema = createInsertSchema(users).pick({
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+// Property (Imóvel) schema
+export const properties = pgTable("properties", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  address: text("address").notNull(),
+  type: text("type").notNull(), // apartamento, casa, comercial, terreno
+  owner: text("owner").notNull(),
+  ownerDocument: text("owner_document").notNull(), // CPF/CNPJ
+  rentValue: decimal("rent_value", { precision: 10, scale: 2 }).notNull(),
+  description: text("description"),
+});
+
+export const insertPropertySchema = createInsertSchema(properties).omit({ id: true });
+export type InsertProperty = z.infer<typeof insertPropertySchema>;
+export type Property = typeof properties.$inferSelect;
+
+export const propertiesRelations = relations(properties, ({ many }) => ({
+  contracts: many(contracts),
+}));
+
+// Contract (Contrato) schema
+export const contracts = pgTable("contracts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  propertyId: varchar("property_id").notNull(),
+  tenant: text("tenant").notNull(),
+  tenantDocument: text("tenant_document").notNull(), // CPF/CNPJ
+  tenantEmail: text("tenant_email"),
+  tenantPhone: text("tenant_phone"),
+  startDate: text("start_date").notNull(),
+  endDate: text("end_date").notNull(),
+  rentValue: decimal("rent_value", { precision: 10, scale: 2 }).notNull(),
+  dueDay: integer("due_day").notNull(), // Day of month for payment
+  status: text("status").notNull().default("active"), // active, expired, cancelled
+});
+
+export const insertContractSchema = createInsertSchema(contracts).omit({ id: true });
+export type InsertContract = z.infer<typeof insertContractSchema>;
+export type Contract = typeof contracts.$inferSelect;
+
+export const contractsRelations = relations(contracts, ({ one, many }) => ({
+  property: one(properties, {
+    fields: [contracts.propertyId],
+    references: [properties.id],
+  }),
+  payments: many(payments),
+}));
+
+// Payment (Recebimento) schema
+export const payments = pgTable("payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contractId: varchar("contract_id").notNull(),
+  referenceMonth: text("reference_month").notNull(), // YYYY-MM format
+  dueDate: text("due_date").notNull(),
+  paymentDate: text("payment_date"),
+  value: decimal("value", { precision: 10, scale: 2 }).notNull(),
+  status: text("status").notNull().default("pending"), // paid, pending, overdue
+  paymentMethod: text("payment_method"), // pix, boleto, transferencia, dinheiro
+  notes: text("notes"),
+});
+
+export const insertPaymentSchema = createInsertSchema(payments).omit({ id: true });
+export type InsertPayment = z.infer<typeof insertPaymentSchema>;
+export type Payment = typeof payments.$inferSelect;
+
+export const paymentsRelations = relations(payments, ({ one }) => ({
+  contract: one(contracts, {
+    fields: [payments.contractId],
+    references: [contracts.id],
+  }),
+}));
+
+// Combined types for frontend use
+export type PropertyWithDetails = Property;
+
+export type ContractWithProperty = Contract & {
+  property?: Property;
+};
+
+export type PaymentWithContract = Payment & {
+  contract?: Contract;
+  property?: Property;
+};
+
+// Dashboard metrics type
+export type DashboardMetrics = {
+  totalProperties: number;
+  activeContracts: number;
+  receivedThisMonth: number;
+  pendingThisMonth: number;
+  upcomingPayments: PaymentWithContract[];
+};
