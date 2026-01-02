@@ -4,7 +4,6 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { setupAuth } from "./auth";
 import { runMigrations } from "./migrate";
-import { seedDatabase } from "./seed";
 
 const app = express();
 const httpServer = createServer(app);
@@ -100,7 +99,8 @@ app.use((req, res, next) => {
   // Executar seed se variável de ambiente estiver definida
   if (process.env.SEED_DATABASE === 'true') {
     try {
-      await seedDatabase();
+      const { resetAndSeed } = await import('./reset-and-seed');
+      await resetAndSeed();
     } catch (error) {
       console.error('Erro ao executar seed:', error);
     }
