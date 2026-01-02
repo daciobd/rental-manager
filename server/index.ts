@@ -4,6 +4,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { setupAuth } from "./auth";
 import { runMigrations } from "./migrate";
+import { seedDatabase } from "./seed";
 
 const app = express();
 const httpServer = createServer(app);
@@ -94,6 +95,15 @@ app.use((req, res, next) => {
     console.error('ERRO CRÍTICO ao executar migrations:', error);
     console.error('Stack trace:', error instanceof Error ? error.stack : 'N/A');
     // Não abortar o servidor, mas logar o erro
+  }
+
+  // Executar seed se variável de ambiente estiver definida
+  if (process.env.SEED_DATABASE === 'true') {
+    try {
+      await seedDatabase();
+    } catch (error) {
+      console.error('Erro ao executar seed:', error);
+    }
   }
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
