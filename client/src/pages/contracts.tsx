@@ -59,10 +59,17 @@ const contractFormSchema = z.object({
   rentValue: z.string().min(1, "Valor do aluguel é obrigatório"),
   dueDay: z.string().min(1, "Dia de vencimento é obrigatório"),
   status: z.enum(["active", "expired", "cancelled"]).default("active"),
-  adminFeePercent: z.string().optional(),
-  adjustmentIndex: z.string().optional(),
-  adjustmentPercent: z.string().optional(),
-  nextAdjustmentDate: z.string().optional(),
+  // PF/PJ
+  tenantType: z.enum(["pf", "pj"]).default("pf"),
+  // Composição
+  rentBaseValue: z.string().optional(),
+  iptuValue: z.string().optional(),
+  condominiumValue: z.string().optional(),
+  iptuReimbursable: z.boolean().optional(),
+  condominiumReimbursable: z.boolean().optional(),
+  // IVA/IBS
+  ivaIbsSubject: z.boolean().optional(),
+  ivaIbsRate: z.string().optional(),
 });
 
 type ContractFormData = z.infer<typeof contractFormSchema>;
@@ -281,24 +288,6 @@ function ContractCard({
               {formatCurrency(contract.rentValue)}
             </span>
           </div>
-          {(contract.adminFeePercent || contract.adjustmentIndex) && (
-            <div className="mt-2 pt-2 border-t flex flex-wrap gap-3 text-xs text-muted-foreground">
-              {contract.adminFeePercent && (
-                <span className="flex items-center gap-1">
-                  <Percent className="h-3 w-3" />
-                  Taxa: {contract.adminFeePercent}%
-                </span>
-              )}
-              {contract.adjustmentIndex && (
-                <span className="flex items-center gap-1">
-                  <RefreshCw className="h-3 w-3" />
-                  {contract.adjustmentIndex === "fixo" 
-                    ? `Reajuste: ${contract.adjustmentPercent}%/ano`
-                    : `Reajuste: ${contract.adjustmentIndex}`}
-                </span>
-              )}
-            </div>
-          )}
         </div>
       </CardContent>
     </Card>
@@ -319,7 +308,7 @@ function ContractForm({
   const { toast } = useToast();
   const isEditing = !!contract;
   const [uploadedDocuments, setUploadedDocuments] = useState<string[]>(
-    contract?.documents || []
+    (contract as any)?.documents || []
   );
 
   const form = useForm<ContractFormData>({
@@ -335,10 +324,14 @@ function ContractForm({
       rentValue: contract?.rentValue?.toString() || "",
       dueDay: contract?.dueDay?.toString() || "5",
       status: (contract?.status as any) || "active",
-      adminFeePercent: contract?.adminFeePercent?.toString() || "",
-      adjustmentIndex: contract?.adjustmentIndex || "",
-      adjustmentPercent: contract?.adjustmentPercent?.toString() || "",
-      nextAdjustmentDate: contract?.nextAdjustmentDate || "",
+      tenantType: "pf",
+      rentBaseValue: "",
+      iptuValue: "",
+      condominiumValue: "",
+      iptuReimbursable: false,
+      condominiumReimbursable: false,
+      ivaIbsSubject: false,
+      ivaIbsRate: "",
     },
   });
 
@@ -371,16 +364,16 @@ function ContractForm({
 
   function onSubmit(data: ContractFormData) {
     const payload: InsertContract = {
-      ...data,
+      propertyId: data.propertyId,
+      tenant: data.tenant,
+      tenantDocument: data.tenantDocument,
       tenantEmail: data.tenantEmail || null,
       tenantPhone: data.tenantPhone || null,
+      startDate: data.startDate,
+      endDate: data.endDate,
+      rentValue: data.rentValue,
       dueDay: parseInt(data.dueDay),
-      adminFeePercent: data.adminFeePercent || null,
-      adjustmentIndex: data.adjustmentIndex || null,
-      adjustmentPercent: data.adjustmentPercent || null,
-      nextAdjustmentDate: data.nextAdjustmentDate || null,
-      lastAdjustmentDate: null,
-      documents: uploadedDocuments.length > 0 ? uploadedDocuments : null,
+      status: data.status,
     };
     if (isEditing) {
       updateMutation.mutate(payload);
@@ -596,101 +589,10 @@ function ContractForm({
           />
         </div>
 
-        <div className="border-t pt-4 mt-4">
-          <h4 className="font-medium mb-4 text-sm text-muted-foreground">Taxa de Administração</h4>
-          <FormField
-            control={form.control}
-            name="adminFeePercent"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Taxa de Administração (%)</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder="Ex: 10 para 10%"
-                    {...field}
-                    data-testid="input-contract-admin-fee"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
         <DocumentUploadSection 
           documents={uploadedDocuments} 
           onDocumentsChange={setUploadedDocuments} 
         />
-
-        <div className="border-t pt-4 mt-4">
-          <h4 className="font-medium mb-4 text-sm text-muted-foreground">Reajuste Automático</h4>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <FormField
-              control={form.control}
-              name="adjustmentIndex"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Índice de Reajuste</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger data-testid="select-adjustment-index">
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="">Nenhum</SelectItem>
-                      <SelectItem value="IGPM">IGP-M</SelectItem>
-                      <SelectItem value="IPCA">IPCA</SelectItem>
-                      <SelectItem value="fixo">Percentual Fixo</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="adjustmentPercent"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Percentual Fixo (%)</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="Ex: 5"
-                      disabled={form.watch("adjustmentIndex") !== "fixo"}
-                      {...field}
-                      data-testid="input-adjustment-percent"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="nextAdjustmentDate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Próximo Reajuste</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="date" 
-                      {...field} 
-                      data-testid="input-next-adjustment" 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        </div>
 
         <div className="flex justify-end gap-2 pt-4">
           <Button type="button" variant="outline" onClick={onCancel}>
