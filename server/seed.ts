@@ -1,5 +1,4 @@
-import { db } from "./db";
-import { users, properties, contracts, payments } from "@shared/schema";
+import { pool } from "./db";
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
 
@@ -12,220 +11,364 @@ async function hashPassword(password: string): Promise<string> {
 }
 
 export async function seedDatabase() {
-  console.log("Verificando se já existem dados...");
+  console.log("🌱 Iniciando seed do banco de dados...");
 
-  const existingUsers = await db.select().from(users).limit(1);
-  if (existingUsers.length > 0) {
-    console.log("Banco já possui dados. Pulando seed.");
-    return;
-  }
-
-  console.log("Iniciando seed do banco de dados...");
-
-  // 1. Criar usuário admin
-  console.log("Criando usuário admin...");
-  const hashedPassword = await hashPassword("admin123");
-  const [adminUser] = await db
-    .insert(users)
-    .values({
-      username: "admin@gestao.com",
-      password: hashedPassword,
-    })
-    .returning();
-
-  console.log(`Usuário criado: ${adminUser.username}`);
-
-  // 2. Criar imóveis
-  console.log("Criando imóveis...");
-  const propertiesData = [
-    {
-      address: "Rua Augusta, 1500, Apto 42 - Jardim Paulista, São Paulo/SP",
-      type: "apartment",
-      description: "Apartamento 2 quartos, 1 vaga",
-      rentValue: "2500.00",
-      owner: "Carlos Silva",
-      ownerDocument: "123.456.789-00",
-    },
-    {
-      address: "Rua Pamplona, 300 - Bela Vista, São Paulo/SP",
-      type: "house",
-      description: "Casa 3 quartos com quintal",
-      rentValue: "3500.00",
-      owner: "Maria Santos",
-      ownerDocument: "987.654.321-00",
-    },
-    {
-      address: "Av. Paulista, 1000, Loja 5 - Centro, São Paulo/SP",
-      type: "commercial",
-      description: "Loja comercial 80m²",
-      rentValue: "5000.00",
-      owner: "João Oliveira",
-      ownerDocument: "456.789.123-00",
-    },
-    {
-      address: "Rua da Consolação, 2800, Apto 101 - Consolação, São Paulo/SP",
-      type: "apartment",
-      description: "Apartamento 3 quartos, 2 vagas",
-      rentValue: "3200.00",
-      owner: "Ana Ferreira",
-      ownerDocument: "321.654.987-00",
-    },
-    {
-      address: "Praça da República, 50, Sala 302 - República, São Paulo/SP",
-      type: "commercial",
-      description: "Sala comercial 60m²",
-      rentValue: "4200.00",
-      owner: "Pedro Costa",
-      ownerDocument: "654.321.987-00",
-    },
-  ];
-
-  const createdProperties = await db.insert(properties).values(propertiesData).returning();
-  console.log(`${createdProperties.length} imóveis criados`);
-
-  // 3. Criar contratos
-  console.log("Criando contratos...");
-  const today = new Date();
-  const year = today.getFullYear();
-  
-  const contractsData = [
-    {
-      propertyId: createdProperties[0].id,
-      tenant: "Roberto Almeida",
-      tenantDocument: "111.222.333-44",
-      tenantEmail: "roberto@gmail.com",
-      tenantPhone: "(11) 98111-2222",
-      startDate: `${year}-01-01`,
-      endDate: `${year + 1}-01-01`,
-      rentValue: "2500.00",
-      dueDay: 5,
-      status: "active",
-    },
-    {
-      propertyId: createdProperties[1].id,
-      tenant: "Fernanda Lima",
-      tenantDocument: "222.333.444-55",
-      tenantEmail: "fernanda@hotmail.com",
-      tenantPhone: "(11) 99222-3333",
-      startDate: `${year}-01-15`,
-      endDate: `${year + 2}-01-15`,
-      rentValue: "3500.00",
-      dueDay: 10,
-      status: "active",
-    },
-    {
-      propertyId: createdProperties[2].id,
-      tenant: "Tech Solutions Ltda",
-      tenantDocument: "12.345.678/0001-90",
-      tenantEmail: "contato@techsolutions.com.br",
-      tenantPhone: "(11) 3333-4444",
-      startDate: `${year - 1}-07-01`,
-      endDate: `${year + 1}-07-01`,
-      rentValue: "5000.00",
-      dueDay: 1,
-      status: "active",
-    },
-    {
-      propertyId: createdProperties[3].id,
-      tenant: "Juliana Mendes",
-      tenantDocument: "333.444.555-66",
-      tenantEmail: "juliana.mendes@outlook.com",
-      tenantPhone: "(11) 97333-4444",
-      startDate: `${year}-02-01`,
-      endDate: `${year + 1}-02-01`,
-      rentValue: "3200.00",
-      dueDay: 15,
-      status: "active",
-    },
-    {
-      propertyId: createdProperties[4].id,
-      tenant: "Advocacia Martins & Associados",
-      tenantDocument: "98.765.432/0001-10",
-      tenantEmail: "contato@martinsadvocacia.com.br",
-      tenantPhone: "(11) 3555-6666",
-      startDate: `${year}-01-01`,
-      endDate: `${year + 3}-01-01`,
-      rentValue: "4200.00",
-      dueDay: 20,
-      status: "active",
-    },
-  ];
-
-  const createdContracts = await db.insert(contracts).values(contractsData).returning();
-  console.log(`${createdContracts.length} contratos criados`);
-
-  // 4. Criar pagamentos
-  console.log("Criando pagamentos...");
-
-  const paymentsData: Array<{
-    contractId: string;
-    referenceMonth: string;
-    value: string;
-    dueDate: string;
-    status: "paid" | "pending" | "overdue";
-    paymentDate: string | null;
-  }> = [];
-
-  // Janeiro - todos pagos (primeiros 4 contratos)
-  createdContracts.slice(0, 4).forEach((contract) => {
-    paymentsData.push({
-      contractId: contract.id,
-      referenceMonth: `${year}-01`,
-      value: contract.rentValue,
-      dueDate: `${year}-01-${String(contract.dueDay).padStart(2, '0')}`,
-      status: "paid",
-      paymentDate: `${year}-01-${String(contract.dueDay).padStart(2, '0')}`,
-    });
-  });
-
-  // Fevereiro - mix de status
-  createdContracts.forEach((contract, idx) => {
-    let status: "paid" | "pending" | "overdue" = "paid";
-    let paymentDate: string | null = `${year}-02-${String(contract.dueDay).padStart(2, '0')}`;
-
-    if (idx === 3) {
-      status = "overdue";
-      paymentDate = null;
-    } else if (idx === 4) {
-      status = "pending";
-      paymentDate = null;
+  try {
+    // Verificar se já existe dados
+    const userCheck = await pool.query("SELECT COUNT(*) FROM users");
+    if (parseInt(userCheck.rows[0].count) > 0) {
+      console.log("⚠️  Banco já possui dados. Pulando seed.");
+      return;
     }
 
-    paymentsData.push({
-      contractId: contract.id,
-      referenceMonth: `${year}-02`,
-      value: contract.rentValue,
-      dueDate: `${year}-02-${String(Math.min(contract.dueDay, 28)).padStart(2, '0')}`,
-      status,
-      paymentDate,
-    });
-  });
+    // 1. Criar usuário admin
+    const hashedPassword = await hashPassword("admin123");
+    await pool.query(
+      `
+      INSERT INTO users (username, password)
+      VALUES ('admin@gestao.com', $1)
+    `,
+      [hashedPassword],
+    );
+    console.log("✅ Usuário admin criado");
 
-  // Março - maioria pendente
-  createdContracts.forEach((contract, idx) => {
-    paymentsData.push({
-      contractId: contract.id,
-      referenceMonth: `${year}-03`,
-      value: contract.rentValue,
-      dueDate: `${year}-03-${String(contract.dueDay).padStart(2, '0')}`,
-      status: idx === 0 ? "paid" : "pending",
-      paymentDate: idx === 0 ? `${year}-03-${String(contract.dueDay).padStart(2, '0')}` : null,
-    });
-  });
+    // 2. Criar imóveis
+    const properties = [
+      {
+        address:
+          "Rua das Flores, 123 - Apto 501 - Jardim Paulista, São Paulo/SP",
+        type: "apartamento",
+        owner: "João da Silva Santos",
+        ownerDocument: "123.456.789-00",
+        rentValue: "2500.00",
+        description:
+          "Apartamento 2 quartos, 1 suíte, 1 vaga de garagem, próximo ao metrô",
+      },
+      {
+        address: "Av. Paulista, 1000 - Casa 3 - Bela Vista, São Paulo/SP",
+        type: "casa",
+        owner: "Maria Aparecida Santos",
+        ownerDocument: "987.654.321-00",
+        rentValue: "3500.00",
+        description: "Casa 3 quartos, 2 vagas, churrasqueira, quintal",
+      },
+      {
+        address: "Rua do Comércio, 500 - Loja 1 - Centro, São Paulo/SP",
+        type: "comercial",
+        owner: "Empresa XYZ Empreendimentos LTDA",
+        ownerDocument: "12.345.678/0001-90",
+        rentValue: "5000.00",
+        description: "Loja comercial 80m², 2 banheiros, copa, estacionamento",
+      },
+      {
+        address: "Rua Augusta, 250 - Apto 302 - Consolação, São Paulo/SP",
+        type: "apartamento",
+        owner: "Carlos Eduardo Lima",
+        ownerDocument: "456.789.123-00",
+        rentValue: "3200.00",
+        description: "Apartamento 3 quartos, 2 vagas, varanda gourmet",
+      },
+      {
+        address: "Av. Ipiranga, 800 - Sala 15 - República, São Paulo/SP",
+        type: "comercial",
+        owner: "Tech Investimentos S.A.",
+        ownerDocument: "98.765.432/0001-10",
+        rentValue: "4200.00",
+        description: "Sala comercial 60m², 2 salas, recepção, copa",
+      },
+    ];
 
-  await db.insert(payments).values(paymentsData);
-  console.log(`${paymentsData.length} pagamentos criados`);
+    const propertyIds = [];
+    for (const prop of properties) {
+      const result = await pool.query(
+        `
+        INSERT INTO properties (address, type, owner, owner_document, rent_value, description)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING id
+      `,
+        [
+          prop.address,
+          prop.type,
+          prop.owner,
+          prop.ownerDocument,
+          prop.rentValue,
+          prop.description,
+        ],
+      );
+      propertyIds.push(result.rows[0].id);
+    }
+    console.log(`✅ ${properties.length} imóveis criados`);
 
-  console.log("\n========================================");
-  console.log("SEED CONCLUÍDO COM SUCESSO!");
-  console.log("========================================");
-  console.log("\nCredenciais de acesso:");
-  console.log("  Usuário: admin@gestao.com");
-  console.log("  Senha: admin123");
-  console.log("\nDados criados:");
-  console.log(`  - 1 usuário administrador`);
-  console.log(`  - ${createdProperties.length} imóveis`);
-  console.log(`  - ${createdContracts.length} contratos`);
-  console.log(`  - ${paymentsData.length} pagamentos`);
-  console.log("========================================\n");
+    // 3. Criar contratos
+    const contracts = [
+      {
+        propertyId: propertyIds[0],
+        tenant: "Pedro Henrique Costa",
+        tenantDocument: "111.222.333-44",
+        tenantEmail: "pedro.costa@email.com",
+        tenantPhone: "(11) 98765-4321",
+        startDate: "2024-01-01",
+        endDate: "2025-01-01",
+        rentValue: "2500.00",
+        dueDay: 10,
+        status: "active",
+      },
+      {
+        propertyId: propertyIds[1],
+        tenant: "Ana Carolina Lima Silva",
+        tenantDocument: "222.333.444-55",
+        tenantEmail: "ana.lima@email.com",
+        tenantPhone: "(11) 91234-5678",
+        startDate: "2024-01-15",
+        endDate: "2025-01-15",
+        rentValue: "3500.00",
+        dueDay: 15,
+        status: "active",
+      },
+      {
+        propertyId: propertyIds[2],
+        tenant: "Restaurante Bom Sabor LTDA",
+        tenantDocument: "11.222.333/0001-44",
+        tenantEmail: "contato@bomsabor.com.br",
+        tenantPhone: "(11) 3333-4444",
+        startDate: "2024-02-01",
+        endDate: "2026-02-01",
+        rentValue: "5000.00",
+        dueDay: 5,
+        status: "active",
+      },
+      {
+        propertyId: propertyIds[3],
+        tenant: "Fernanda Oliveira Souza",
+        tenantDocument: "333.444.555-66",
+        tenantEmail: "fernanda.oliveira@email.com",
+        tenantPhone: "(11) 99999-8888",
+        startDate: "2023-12-01",
+        endDate: "2024-12-01",
+        rentValue: "3200.00",
+        dueDay: 20,
+        status: "active",
+      },
+      {
+        propertyId: propertyIds[4],
+        tenant: "Consultoria ABC Ltda",
+        tenantDocument: "22.333.444/0001-55",
+        tenantEmail: "contato@consultoriaabc.com",
+        tenantPhone: "(11) 4444-5555",
+        startDate: "2024-01-10",
+        endDate: "2025-01-10",
+        rentValue: "4200.00",
+        dueDay: 8,
+        status: "active",
+      },
+    ];
+
+    const contractIds = [];
+    for (const contract of contracts) {
+      const result = await pool.query(
+        `
+        INSERT INTO contracts 
+        (property_id, tenant, tenant_document, tenant_email, tenant_phone, 
+         start_date, end_date, rent_value, due_day, status)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        RETURNING id
+      `,
+        [
+          contract.propertyId,
+          contract.tenant,
+          contract.tenantDocument,
+          contract.tenantEmail,
+          contract.tenantPhone,
+          contract.startDate,
+          contract.endDate,
+          contract.rentValue,
+          contract.dueDay,
+          contract.status,
+        ],
+      );
+      contractIds.push(result.rows[0].id);
+    }
+    console.log(`✅ ${contracts.length} contratos criados`);
+
+    // 4. Criar pagamentos (mix de pagos, pendentes e atrasados)
+    const payments = [
+      // Janeiro 2024 - Todos pagos
+      {
+        contractId: contractIds[0],
+        referenceMonth: "2024-01",
+        dueDate: "2024-01-10",
+        paymentDate: "2024-01-09",
+        value: "2500.00",
+        status: "paid",
+        paymentMethod: "pix",
+        notes: "Pagamento via PIX",
+      },
+      {
+        contractId: contractIds[1],
+        referenceMonth: "2024-01",
+        dueDate: "2024-01-15",
+        paymentDate: "2024-01-15",
+        value: "3500.00",
+        status: "paid",
+        paymentMethod: "transferencia",
+        notes: "Transferência bancária",
+      },
+      {
+        contractId: contractIds[3],
+        referenceMonth: "2024-01",
+        dueDate: "2024-01-20",
+        paymentDate: "2024-01-18",
+        value: "3200.00",
+        status: "paid",
+        paymentMethod: "pix",
+        notes: "Pagamento antecipado",
+      },
+      {
+        contractId: contractIds[4],
+        referenceMonth: "2024-01",
+        dueDate: "2024-01-08",
+        paymentDate: "2024-01-08",
+        value: "4200.00",
+        status: "paid",
+        paymentMethod: "boleto",
+        notes: "Boleto bancário",
+      },
+      // Fevereiro 2024 - Mix
+      {
+        contractId: contractIds[0],
+        referenceMonth: "2024-02",
+        dueDate: "2024-02-10",
+        paymentDate: "2024-02-12",
+        value: "2500.00",
+        status: "paid",
+        paymentMethod: "pix",
+        notes: "Pago com 2 dias de atraso",
+      },
+      {
+        contractId: contractIds[1],
+        referenceMonth: "2024-02",
+        dueDate: "2024-02-15",
+        paymentDate: null,
+        value: "3500.00",
+        status: "overdue",
+        paymentMethod: null,
+        notes: null,
+      },
+      {
+        contractId: contractIds[2],
+        referenceMonth: "2024-02",
+        dueDate: "2024-02-05",
+        paymentDate: "2024-02-05",
+        value: "5000.00",
+        status: "paid",
+        paymentMethod: "transferencia",
+        notes: "Pagamento em dia",
+      },
+      {
+        contractId: contractIds[3],
+        referenceMonth: "2024-02",
+        dueDate: "2024-02-20",
+        paymentDate: "2024-02-19",
+        value: "3200.00",
+        status: "paid",
+        paymentMethod: "pix",
+        notes: null,
+      },
+      {
+        contractId: contractIds[4],
+        referenceMonth: "2024-02",
+        dueDate: "2024-02-08",
+        paymentDate: null,
+        value: "4200.00",
+        status: "pending",
+        paymentMethod: null,
+        notes: null,
+      },
+      // Março 2024 - Pendentes
+      {
+        contractId: contractIds[0],
+        referenceMonth: "2024-03",
+        dueDate: "2024-03-10",
+        paymentDate: null,
+        value: "2500.00",
+        status: "pending",
+        paymentMethod: null,
+        notes: null,
+      },
+      {
+        contractId: contractIds[1],
+        referenceMonth: "2024-03",
+        dueDate: "2024-03-15",
+        paymentDate: null,
+        value: "3500.00",
+        status: "pending",
+        paymentMethod: null,
+        notes: null,
+      },
+      {
+        contractId: contractIds[2],
+        referenceMonth: "2024-03",
+        dueDate: "2024-03-05",
+        paymentDate: "2024-03-04",
+        value: "5000.00",
+        status: "paid",
+        paymentMethod: "pix",
+        notes: "Pagamento antecipado",
+      },
+      {
+        contractId: contractIds[3],
+        referenceMonth: "2024-03",
+        dueDate: "2024-03-20",
+        paymentDate: null,
+        value: "3200.00",
+        status: "pending",
+        paymentMethod: null,
+        notes: null,
+      },
+      {
+        contractId: contractIds[4],
+        referenceMonth: "2024-03",
+        dueDate: "2024-03-08",
+        paymentDate: null,
+        value: "4200.00",
+        status: "pending",
+        paymentMethod: null,
+        notes: null,
+      },
+    ];
+
+    for (const payment of payments) {
+      await pool.query(
+        `
+        INSERT INTO payments 
+        (contract_id, reference_month, due_date, payment_date, value, status, payment_method, notes)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `,
+        [
+          payment.contractId,
+          payment.referenceMonth,
+          payment.dueDate,
+          payment.paymentDate,
+          payment.value,
+          payment.status,
+          payment.paymentMethod,
+          payment.notes,
+        ],
+      );
+    }
+    console.log(`✅ ${payments.length} pagamentos criados`);
+
+    console.log("🎉 Seed concluído com sucesso!");
+    console.log("");
+    console.log("📊 Resumo dos dados criados:");
+    console.log(`   👤 1 usuário (admin@gestao.com / admin123)`);
+    console.log(`   🏠 ${properties.length} imóveis`);
+    console.log(`   📄 ${contracts.length} contratos`);
+    console.log(`   💰 ${payments.length} pagamentos`);
+    console.log("");
+    console.log("✅ Você já pode fazer login e ver o sistema populado!");
+  } catch (error) {
+    console.error("❌ Erro ao fazer seed:", error);
+    throw error;
+  }
 }
