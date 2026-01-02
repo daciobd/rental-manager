@@ -324,14 +324,14 @@ function ContractForm({
       rentValue: contract?.rentValue?.toString() || "",
       dueDay: contract?.dueDay?.toString() || "5",
       status: (contract?.status as any) || "active",
-      tenantType: "pf",
-      rentBaseValue: "",
-      iptuValue: "",
-      condominiumValue: "",
-      iptuReimbursable: false,
-      condominiumReimbursable: false,
-      ivaIbsSubject: false,
-      ivaIbsRate: "",
+      tenantType: ((contract as any)?.tenantType as any) || "pf",
+      rentBaseValue: (contract as any)?.rentBaseValue?.toString() || "",
+      iptuValue: (contract as any)?.iptuValue?.toString() || "0",
+      condominiumValue: (contract as any)?.condominiumValue?.toString() || "0",
+      iptuReimbursable: (contract as any)?.iptuReimbursable || false,
+      condominiumReimbursable: (contract as any)?.condominiumReimbursable || false,
+      ivaIbsSubject: (contract as any)?.ivaIbsSubject !== false,
+      ivaIbsRate: (contract as any)?.ivaIbsRate?.toString() || "0",
     },
   });
 
@@ -363,7 +363,12 @@ function ContractForm({
   });
 
   function onSubmit(data: ContractFormData) {
-    const payload: InsertContract = {
+    const base = parseFloat(data.rentBaseValue || "0");
+    const iptu = parseFloat(data.iptuValue || "0");
+    const cond = parseFloat(data.condominiumValue || "0");
+    const total = base + iptu + cond;
+    
+    const payload: any = {
       propertyId: data.propertyId,
       tenant: data.tenant,
       tenantDocument: data.tenantDocument,
@@ -371,10 +376,20 @@ function ContractForm({
       tenantPhone: data.tenantPhone || null,
       startDate: data.startDate,
       endDate: data.endDate,
-      rentValue: data.rentValue,
+      rentValue: total.toString(),
       dueDay: parseInt(data.dueDay),
       status: data.status,
+      tenantType: data.tenantType || "pf",
+      rentBaseValue: data.rentBaseValue || null,
+      iptuValue: data.iptuValue || "0",
+      condominiumValue: data.condominiumValue || "0",
+      iptuReimbursable: data.iptuReimbursable || false,
+      condominiumReimbursable: data.condominiumReimbursable || false,
+      ivaIbsSubject: data.ivaIbsSubject !== false,
+      ivaIbsRate: data.ivaIbsRate || "0",
+      documents: uploadedDocuments.length > 0 ? uploadedDocuments : null,
     };
+    
     if (isEditing) {
       updateMutation.mutate(payload);
     } else {
@@ -489,6 +504,28 @@ function ContractForm({
           />
         </div>
 
+        <FormField
+          control={form.control}
+          name="tenantType"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tipo de Locatário</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger data-testid="select-tenant-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="pf">Pessoa Física (CPF)</SelectItem>
+                  <SelectItem value="pj">Pessoa Jurídica (CNPJ)</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField
             control={form.control}
@@ -519,74 +556,242 @@ function ContractForm({
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <FormField
-            control={form.control}
-            name="rentValue"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Valor do Aluguel</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder="0,00"
-                    {...field}
-                    data-testid="input-contract-rent"
+        <div className="border-t pt-4 mt-4">
+          <h4 className="font-medium mb-4 text-sm text-muted-foreground">Composição do Aluguel</h4>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="rentBaseValue"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Valor Base do Aluguel</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="2500.00"
+                      {...field}
+                      data-testid="input-rent-base"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="iptuValue"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>IPTU Mensal</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      {...field}
+                      data-testid="input-iptu"
+                    />
+                  </FormControl>
+                  <div className="flex items-center space-x-2 mt-2">
+                    <FormField
+                      control={form.control}
+                      name="iptuReimbursable"
+                      render={({ field: checkField }) => (
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            checked={checkField.value}
+                            onChange={checkField.onChange}
+                            className="h-4 w-4"
+                            data-testid="checkbox-iptu-reimbursable"
+                          />
+                          <label className="text-sm">
+                            Reembolsável (não tributável)
+                          </label>
+                        </div>
+                      )}
+                    />
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="condominiumValue"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Condomínio Mensal</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      {...field}
+                      data-testid="input-condominium"
+                    />
+                  </FormControl>
+                  <div className="flex items-center space-x-2 mt-2">
+                    <FormField
+                      control={form.control}
+                      name="condominiumReimbursable"
+                      render={({ field: checkField }) => (
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            checked={checkField.value}
+                            onChange={checkField.onChange}
+                            className="h-4 w-4"
+                            data-testid="checkbox-condo-reimbursable"
+                          />
+                          <label className="text-sm">
+                            Reembolsável (não tributável)
+                          </label>
+                        </div>
+                      )}
+                    />
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="rentValue"
+              render={() => {
+                const base = parseFloat(form.watch("rentBaseValue") || "0");
+                const iptu = parseFloat(form.watch("iptuValue") || "0");
+                const cond = parseFloat(form.watch("condominiumValue") || "0");
+                const total = base + iptu + cond;
+                
+                return (
+                  <FormItem>
+                    <FormLabel>Valor Total Mensal</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="text"
+                        value={`R$ ${total.toFixed(2)}`}
+                        disabled
+                        className="font-bold bg-muted"
+                        data-testid="input-total-rent"
+                      />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground">
+                      Calculado automaticamente
+                    </p>
+                  </FormItem>
+                );
+              }}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+            <FormField
+              control={form.control}
+              name="dueDay"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Dia de Vencimento</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger data-testid="select-contract-due-day">
+                        <SelectValue placeholder="Dia" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Array.from({ length: 28 }, (_, i) => i + 1).map((day) => (
+                        <SelectItem key={day} value={day.toString()}>
+                          Dia {day}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger data-testid="select-contract-status">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="active">Ativo</SelectItem>
+                      <SelectItem value="expired">Expirado</SelectItem>
+                      <SelectItem value="cancelled">Cancelado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
+
+        <div className="border-t pt-4 mt-4">
+          <h4 className="font-medium mb-4 text-sm text-muted-foreground">Reforma Tributária (IVA/IBS)</h4>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="ivaIbsSubject"
+              render={({ field }) => (
+                <div className="flex items-start space-x-3 pt-6">
+                  <input
+                    type="checkbox"
+                    checked={field.value}
+                    onChange={field.onChange}
+                    className="h-4 w-4 mt-1"
+                    data-testid="checkbox-iva-ibs"
                   />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+                  <div>
+                    <label className="font-medium text-sm">
+                      Sujeito a IVA/IBS
+                    </label>
+                    <p className="text-xs text-muted-foreground">
+                      Marque se este contrato está sujeito à Reforma Tributária
+                    </p>
+                  </div>
+                </div>
+              )}
+            />
 
-          <FormField
-            control={form.control}
-            name="dueDay"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Dia de Vencimento</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+            <FormField
+              control={form.control}
+              name="ivaIbsRate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Alíquota IVA/IBS (%)</FormLabel>
                   <FormControl>
-                    <SelectTrigger data-testid="select-contract-due-day">
-                      <SelectValue placeholder="Dia" />
-                    </SelectTrigger>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      {...field}
+                      data-testid="input-iva-rate"
+                    />
                   </FormControl>
-                  <SelectContent>
-                    {Array.from({ length: 28 }, (_, i) => i + 1).map((day) => (
-                      <SelectItem key={day} value={day.toString()}>
-                        Dia {day}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="status"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Status</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger data-testid="select-contract-status">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="active">Ativo</SelectItem>
-                    <SelectItem value="expired">Expirado</SelectItem>
-                    <SelectItem value="cancelled">Cancelado</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+                  <p className="text-xs text-muted-foreground">
+                    Alíquota estimada (ex: 12.5%)
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
         </div>
 
         <DocumentUploadSection 
