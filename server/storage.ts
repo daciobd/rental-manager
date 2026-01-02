@@ -1,11 +1,20 @@
 // Database integration: blueprint:javascript_database
-import { 
-  users, properties, contracts, payments,
-  type User, type InsertUser,
-  type Property, type InsertProperty,
-  type Contract, type InsertContract, type ContractWithProperty,
-  type Payment, type InsertPayment, type PaymentWithContract,
-  type DashboardMetrics
+import {
+  users,
+  properties,
+  contracts,
+  payments,
+  type User,
+  type InsertUser,
+  type Property,
+  type InsertProperty,
+  type Contract,
+  type InsertContract,
+  type ContractWithProperty,
+  type Payment,
+  type InsertPayment,
+  type PaymentWithContract,
+  type DashboardMetrics,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte, lte, isNull, isNotNull } from "drizzle-orm";
@@ -15,35 +24,46 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  
+
   // Properties
   getProperties(): Promise<Property[]>;
   getProperty(id: string): Promise<Property | undefined>;
   createProperty(property: InsertProperty): Promise<Property>;
-  updateProperty(id: string, property: InsertProperty): Promise<Property | undefined>;
+  updateProperty(
+    id: string,
+    property: InsertProperty,
+  ): Promise<Property | undefined>;
   deleteProperty(id: string): Promise<boolean>;
-  
+
   // Contracts
   getContracts(): Promise<ContractWithProperty[]>;
   getContract(id: string): Promise<ContractWithProperty | undefined>;
   getContractsByPropertyId(propertyId: string): Promise<Contract[]>;
   createContract(contract: InsertContract): Promise<Contract>;
-  updateContract(id: string, contract: InsertContract): Promise<Contract | undefined>;
+  updateContract(
+    id: string,
+    contract: InsertContract,
+  ): Promise<Contract | undefined>;
   deleteContract(id: string): Promise<boolean>;
-  
+
   // Payments
   getPayments(): Promise<PaymentWithContract[]>;
   getPayment(id: string): Promise<PaymentWithContract | undefined>;
   getPaymentsByContractId(contractId: string): Promise<Payment[]>;
   createPayment(payment: InsertPayment): Promise<Payment>;
-  updatePayment(id: string, payment: InsertPayment): Promise<Payment | undefined>;
+  updatePayment(
+    id: string,
+    payment: InsertPayment,
+  ): Promise<Payment | undefined>;
   deletePayment(id: string): Promise<boolean>;
-  
+
   // Dashboard
   getDashboardMetrics(): Promise<DashboardMetrics>;
-  
+
   // Charts
-  getMonthlyRevenueData(): Promise<{ month: string; received: number; pending: number }[]>;
+  getMonthlyRevenueData(): Promise<
+    { month: string; received: number; pending: number }[]
+  >;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -54,7 +74,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.username, username));
     return user || undefined;
   }
 
@@ -69,16 +92,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getProperty(id: string): Promise<Property | undefined> {
-    const [property] = await db.select().from(properties).where(eq(properties.id, id));
+    const [property] = await db
+      .select()
+      .from(properties)
+      .where(eq(properties.id, id));
     return property || undefined;
   }
 
   async createProperty(insertProperty: InsertProperty): Promise<Property> {
-    const [property] = await db.insert(properties).values(insertProperty).returning();
+    const [property] = await db
+      .insert(properties)
+      .values(insertProperty)
+      .returning();
     return property;
   }
 
-  async updateProperty(id: string, insertProperty: InsertProperty): Promise<Property | undefined> {
+  async updateProperty(
+    id: string,
+    insertProperty: InsertProperty,
+  ): Promise<Property | undefined> {
     const [property] = await db
       .update(properties)
       .set(insertProperty)
@@ -88,7 +120,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteProperty(id: string): Promise<boolean> {
-    const result = await db.delete(properties).where(eq(properties.id, id)).returning();
+    const result = await db
+      .delete(properties)
+      .where(eq(properties.id, id))
+      .returning();
     return result.length > 0;
   }
 
@@ -96,21 +131,27 @@ export class DatabaseStorage implements IStorage {
   async getContracts(): Promise<ContractWithProperty[]> {
     const allContracts = await db.select().from(contracts);
     const allProperties = await db.select().from(properties);
-    
-    const propertiesMap = new Map(allProperties.map(p => [p.id, p]));
-    
-    return allContracts.map(contract => ({
+
+    const propertiesMap = new Map(allProperties.map((p) => [p.id, p]));
+
+    return allContracts.map((contract) => ({
       ...contract,
       property: propertiesMap.get(contract.propertyId),
     }));
   }
 
   async getContract(id: string): Promise<ContractWithProperty | undefined> {
-    const [contract] = await db.select().from(contracts).where(eq(contracts.id, id));
+    const [contract] = await db
+      .select()
+      .from(contracts)
+      .where(eq(contracts.id, id));
     if (!contract) return undefined;
-    
-    const [property] = await db.select().from(properties).where(eq(properties.id, contract.propertyId));
-    
+
+    const [property] = await db
+      .select()
+      .from(properties)
+      .where(eq(properties.id, contract.propertyId));
+
     return {
       ...contract,
       property: property || undefined,
@@ -118,18 +159,27 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getContractsByPropertyId(propertyId: string): Promise<Contract[]> {
-    return await db.select().from(contracts).where(eq(contracts.propertyId, propertyId));
+    return await db
+      .select()
+      .from(contracts)
+      .where(eq(contracts.propertyId, propertyId));
   }
 
   async createContract(insertContract: InsertContract): Promise<Contract> {
-    const [contract] = await db.insert(contracts).values({
-      ...insertContract,
-      status: insertContract.status || "active",
-    }).returning();
+    const [contract] = await db
+      .insert(contracts)
+      .values({
+        ...insertContract,
+        status: insertContract.status || "active",
+      })
+      .returning();
     return contract;
   }
 
-  async updateContract(id: string, insertContract: InsertContract): Promise<Contract | undefined> {
+  async updateContract(
+    id: string,
+    insertContract: InsertContract,
+  ): Promise<Contract | undefined> {
     const [contract] = await db
       .update(contracts)
       .set({
@@ -142,20 +192,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteContract(id: string): Promise<boolean> {
-    const result = await db.delete(contracts).where(eq(contracts.id, id)).returning();
+    const result = await db
+      .delete(contracts)
+      .where(eq(contracts.id, id))
+      .returning();
     return result.length > 0;
   }
 
   // Payments
   async getPayments(): Promise<PaymentWithContract[]> {
-    const allPayments = await db.select().from(payments).orderBy(desc(payments.dueDate));
+    const allPayments = await db
+      .select()
+      .from(payments)
+      .orderBy(desc(payments.dueDate));
     const allContracts = await db.select().from(contracts);
     const allProperties = await db.select().from(properties);
-    
-    const contractsMap = new Map(allContracts.map(c => [c.id, c]));
-    const propertiesMap = new Map(allProperties.map(p => [p.id, p]));
-    
-    return allPayments.map(payment => {
+
+    const contractsMap = new Map(allContracts.map((c) => [c.id, c]));
+    const propertiesMap = new Map(allProperties.map((p) => [p.id, p]));
+
+    return allPayments.map((payment) => {
       const contract = contractsMap.get(payment.contractId);
       return {
         ...payment,
@@ -166,17 +222,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPayment(id: string): Promise<PaymentWithContract | undefined> {
-    const [payment] = await db.select().from(payments).where(eq(payments.id, id));
+    const [payment] = await db
+      .select()
+      .from(payments)
+      .where(eq(payments.id, id));
     if (!payment) return undefined;
-    
-    const [contract] = await db.select().from(contracts).where(eq(contracts.id, payment.contractId));
+
+    const [contract] = await db
+      .select()
+      .from(contracts)
+      .where(eq(contracts.id, payment.contractId));
     let property: Property | undefined;
-    
+
     if (contract) {
-      const [prop] = await db.select().from(properties).where(eq(properties.id, contract.propertyId));
+      const [prop] = await db
+        .select()
+        .from(properties)
+        .where(eq(properties.id, contract.propertyId));
       property = prop;
     }
-    
+
     return {
       ...payment,
       contract: contract || undefined,
@@ -185,18 +250,27 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPaymentsByContractId(contractId: string): Promise<Payment[]> {
-    return await db.select().from(payments).where(eq(payments.contractId, contractId));
+    return await db
+      .select()
+      .from(payments)
+      .where(eq(payments.contractId, contractId));
   }
 
   async createPayment(insertPayment: InsertPayment): Promise<Payment> {
-    const [payment] = await db.insert(payments).values({
-      ...insertPayment,
-      status: insertPayment.status || "pending",
-    }).returning();
+    const [payment] = await db
+      .insert(payments)
+      .values({
+        ...insertPayment,
+        status: insertPayment.status || "pending",
+      })
+      .returning();
     return payment;
   }
 
-  async updatePayment(id: string, insertPayment: InsertPayment): Promise<Payment | undefined> {
+  async updatePayment(
+    id: string,
+    insertPayment: InsertPayment,
+  ): Promise<Payment | undefined> {
     const [payment] = await db
       .update(payments)
       .set({
@@ -209,7 +283,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deletePayment(id: string): Promise<boolean> {
-    const result = await db.delete(payments).where(eq(payments.id, id)).returning();
+    const result = await db
+      .delete(payments)
+      .where(eq(payments.id, id))
+      .returning();
     return result.length > 0;
   }
 
@@ -218,60 +295,60 @@ export class DatabaseStorage implements IStorage {
     const allProperties = await db.select().from(properties);
     const allContracts = await db.select().from(contracts);
     const allPayments = await db.select().from(payments);
-    
-    const activeContracts = allContracts.filter(c => c.status === "active");
-    
+
+    const activeContracts = allContracts.filter((c) => c.status === "active");
+
     const now = new Date();
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-    
-    const thisMonthPayments = allPayments.filter(p => p.referenceMonth === currentMonth);
-    
-    const contractsMap = new Map(allContracts.map(c => [c.id, c]));
-    
+
+    const thisMonthPayments = allPayments.filter(
+      (p) => p.referenceMonth === currentMonth,
+    );
+
+    const contractsMap = new Map(allContracts.map((c) => [c.id, c]));
+
     const receivedThisMonth = thisMonthPayments
-      .filter(p => p.paymentDate)
+      .filter((p) => p.paymentDate)
       .reduce((sum, p) => sum + parseFloat(p.value.toString()), 0);
-    
+
     const pendingThisMonth = thisMonthPayments
-      .filter(p => !p.paymentDate)
+      .filter((p) => !p.paymentDate)
       .reduce((sum, p) => sum + parseFloat(p.value.toString()), 0);
-    
+
     // Calculate admin fees for received payments this month
-    const adminFeesThisMonth = thisMonthPayments
-      .filter(p => p.paymentDate)
-      .reduce((sum, p) => {
-        const contract = contractsMap.get(p.contractId);
-        const adminFeePercent = contract?.adminFeePercent ? parseFloat(contract.adminFeePercent.toString()) : 0;
-        return sum + (parseFloat(p.value.toString()) * adminFeePercent / 100);
-      }, 0);
-    
+    // Admin fees temporarily disabled (field not in database yet)
+    const adminFeesThisMonth = 0;
+    const netReceivedThisMonth = receivedThisMonth;
+
     const netReceivedThisMonth = receivedThisMonth - adminFeesThisMonth;
-    
+
     // Get upcoming payments (next 30 days, not paid)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const thirtyDaysLater = new Date(today);
     thirtyDaysLater.setDate(thirtyDaysLater.getDate() + 30);
-    
-    const propertiesMap = new Map(allProperties.map(p => [p.id, p]));
-    
+
+    const propertiesMap = new Map(allProperties.map((p) => [p.id, p]));
+
     const upcomingPayments = allPayments
-      .filter(p => {
+      .filter((p) => {
         if (p.paymentDate) return false;
         const dueDate = new Date(p.dueDate);
         return dueDate >= today && dueDate <= thirtyDaysLater;
       })
-      .map(payment => {
+      .map((payment) => {
         const contract = contractsMap.get(payment.contractId);
         return {
           ...payment,
           contract,
-          property: contract ? propertiesMap.get(contract.propertyId) : undefined,
+          property: contract
+            ? propertiesMap.get(contract.propertyId)
+            : undefined,
         };
       })
       .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
       .slice(0, 6);
-    
+
     return {
       totalProperties: allProperties.length,
       activeContracts: activeContracts.length,
@@ -284,37 +361,52 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Charts
-  async getMonthlyRevenueData(): Promise<{ month: string; received: number; pending: number }[]> {
+  async getMonthlyRevenueData(): Promise<
+    { month: string; received: number; pending: number }[]
+  > {
     const allPayments = await db.select().from(payments);
-    
+
     // Get last 6 months
     const months: string[] = [];
     const now = new Date();
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+      months.push(
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+      );
     }
-    
+
     const monthNames: Record<string, string> = {
-      "01": "Jan", "02": "Fev", "03": "Mar", "04": "Abr",
-      "05": "Mai", "06": "Jun", "07": "Jul", "08": "Ago",
-      "09": "Set", "10": "Out", "11": "Nov", "12": "Dez"
+      "01": "Jan",
+      "02": "Fev",
+      "03": "Mar",
+      "04": "Abr",
+      "05": "Mai",
+      "06": "Jun",
+      "07": "Jul",
+      "08": "Ago",
+      "09": "Set",
+      "10": "Out",
+      "11": "Nov",
+      "12": "Dez",
     };
-    
-    return months.map(month => {
-      const monthPayments = allPayments.filter(p => p.referenceMonth === month);
+
+    return months.map((month) => {
+      const monthPayments = allPayments.filter(
+        (p) => p.referenceMonth === month,
+      );
       const received = monthPayments
-        .filter(p => p.paymentDate)
+        .filter((p) => p.paymentDate)
         .reduce((sum, p) => sum + parseFloat(p.value.toString()), 0);
       const pending = monthPayments
-        .filter(p => !p.paymentDate)
+        .filter((p) => !p.paymentDate)
         .reduce((sum, p) => sum + parseFloat(p.value.toString()), 0);
-      
+
       const [year, m] = month.split("-");
       return {
         month: `${monthNames[m]}/${year.slice(2)}`,
         received,
-        pending
+        pending,
       };
     });
   }
