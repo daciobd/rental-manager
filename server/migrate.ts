@@ -1,55 +1,86 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import { migrate } from "drizzle-orm/node-postgres/migrator";
-import pg from "pg";
-import * as fs from "fs";
-
-const { Pool } = pg;
-
-function log(message: string) {
-  const formattedTime = new Date().toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true,
-  });
-  console.log(`${formattedTime} [migrate] ${message}`);
-}
+import { pool } from "./db";
 
 export async function runMigrations() {
-  if (!process.env.DATABASE_URL) {
-    log("DATABASE_URL não configurada, pulando migrations");
-    return;
-  }
-
-  const migrationsFolder = "./migrations";
-  
-  if (!fs.existsSync(migrationsFolder)) {
-    log("Pasta de migrations não encontrada, pulando migrations automáticas");
-    log("Use 'npm run db:push' para sincronizar o schema manualmente");
-    return;
-  }
-
-  const files = fs.readdirSync(migrationsFolder);
-  if (files.length === 0) {
-    log("Nenhuma migration encontrada, pulando migrations automáticas");
-    log("Use 'npm run db:push' para sincronizar o schema manualmente");
-    return;
-  }
-
-  const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-  });
-
-  const db = drizzle(pool);
+  console.log("[migrate] Iniciando criação de tabelas...");
 
   try {
-    log("Executando migrations do banco de dados...");
-    await migrate(db, { migrationsFolder });
-    log("Migrations executadas com sucesso!");
+    // Criar tabela users
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        username TEXT NOT NULL UNIQUE,
+        password TEXT NOT NULL
+      );
+    `);
+    console.log("[migrate] ✅ Tabela users criada");
+
+    // Criar tabela properties
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS properties (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        address TEXT NOT NULL,
+        type TEXT NOT NULL,
+        owner TEXT NOT NULL,
+        owner_document TEXT NOT NULL,
+        rent_value DECIMAL(10, 2) NOT NULL,
+        description TEXT
+      );
+    `);
+    console.log("[migrate] ✅ Tabela properties criada");
+
+    // Criar tabela contracts
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS contracts (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        property_id VARCHAR NOT NULL,
+        tenant TEXT NOT NULL,
+        tenant_document TEXT NOT NULL,
+        tenant_email TEXT,
+        tenant_phone TEXT,
+        start_date TEXT NOT NULL,
+        end_date TEXT NOT NULL,
+        rent_value DECIMAL(10, 2) NOT NULL,
+        due_day INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'active'
+      );
+    `);
+    console.log("[migrate] ✅ Tabela contracts criada");
+
+    // Criar tabela payments
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS payments (
+        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+        contract_id VARCHAR NOT NULL,
+        reference_month TEXT NOT NULL,
+        due_date TEXT NOT NULL,
+        payment_date TEXT,
+        value DECIMAL(10, 2) NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        payment_method TEXT,
+        notes TEXT
+      );
+    `);
+    console.log("[migrate] ✅ Tabela payments criada");
+
+    // Criar tabela de sessões
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS user_sessions (
+        sid VARCHAR NOT NULL PRIMARY KEY,
+        sess JSON NOT NULL,
+        expire TIMESTAMP(6) NOT NULL
+      );
+    `);
+    console.log("[migrate] ✅ Tabela user_sessions criada");
+
+    // Criar índice
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS IDX_session_expire ON user_sessions (expire);
+    `);
+    console.log("[migrate] ✅ Índice criado");
+
+    console.log("[migrate] 🎉 Todas as tabelas criadas com sucesso!");
   } catch (error) {
-    log(`Erro nas migrations: ${error}`);
+    console.error("[migrate] ❌ Erro ao criar tabelas:", error);
     throw error;
-  } finally {
-    await pool.end();
   }
 }
