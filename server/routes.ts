@@ -101,7 +101,9 @@ export async function registerRoutes(
       const contracts = await storage.getContracts();
       res.json(contracts);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch contracts" });
+      console.error('ERRO DETALHADO AO BUSCAR CONTRATOS:', error);
+      console.error('Stack trace:', error instanceof Error ? error.stack : 'N/A');
+      res.status(500).json({ error: "Failed to fetch contracts", details: error instanceof Error ? error.message : String(error) });
     }
   });
 
