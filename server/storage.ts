@@ -320,7 +320,6 @@ export class DatabaseStorage implements IStorage {
     const adminFeesThisMonth = 0;
     const netReceivedThisMonth = receivedThisMonth;
 
-    const netReceivedThisMonth = receivedThisMonth - adminFeesThisMonth;
 
     // Get upcoming payments (next 30 days, not paid)
     const today = new Date();
