@@ -4,6 +4,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { setupAuth } from "./auth";
 import { runMigrations } from "./migrate";
+import { runMigrationsV2 } from "./migrate-v2";
 
 const app = express();
 const httpServer = createServer(app);
@@ -89,6 +90,7 @@ app.use((req, res, next) => {
   try {
     console.log('Iniciando migrations...');
     await runMigrations();
+    await runMigrationsV2();
     console.log('Migrations concluídas com sucesso!');
   } catch (error) {
     console.error('ERRO CRÍTICO ao executar migrations:', error);

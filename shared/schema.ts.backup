@@ -1,5 +1,5 @@
 import { sql, relations } from "drizzle-orm";
-import { pgTable, text, varchar, integer, decimal, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, decimal } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -56,23 +56,9 @@ export const contracts = pgTable("contracts", {
   endDate: text("end_date").notNull(),
   rentValue: decimal("rent_value", { precision: 10, scale: 2 }).notNull(),
   dueDay: integer("due_day").notNull(), // Day of month for payment
-  status: text("status").notNull().default("active"), // active, expired, cancelled
-  
-  // NOVOS CAMPOS - PF/PJ
-  tenantType: text("tenant_type").notNull().default("pf"), // 'pf' ou 'pj'
-  
-  // NOVOS CAMPOS - COMPOSIÇÃO DO ALUGUEL
-  rentBaseValue: decimal("rent_base_value", { precision: 10, scale: 2 }),
-  iptuValue: decimal("iptu_value", { precision: 10, scale: 2 }).default(sql`0`),
-  condominiumValue: decimal("condominium_value", { precision: 10, scale: 2 }).default(sql`0`),
-  
-  // NOVOS CAMPOS - REEMBOLSOS
-  iptuReimbursable: boolean("iptu_reimbursable").default(false),
-  condominiumReimbursable: boolean("condominium_reimbursable").default(false),
-  
-  // NOVOS CAMPOS - REFORMA TRIBUTÁRIA
-  ivaIbsSubject: boolean("iva_ibs_subject").default(true),
-  ivaIbsRate: decimal("iva_ibs_rate", { precision: 5, scale: 2 }).default(sql`0`),
+  status: text("status").notNull().default("active"), 
+  // active, expired, cancelled
+  // Documentos anexados (caminhos de arquivos no object storage)
 });
 
 export const insertContractSchema = createInsertSchema(contracts).omit({
@@ -102,19 +88,6 @@ export const payments = pgTable("payments", {
   status: text("status").notNull().default("pending"), // paid, pending, overdue
   paymentMethod: text("payment_method"), // pix, boleto, transferencia, dinheiro
   notes: text("notes"),
-  
-  // NOVOS CAMPOS - COMPOSIÇÃO DETALHADA
-  rentAmount: decimal("rent_amount", { precision: 10, scale: 2 }),
-  iptuAmount: decimal("iptu_amount", { precision: 10, scale: 2 }).default(sql`0`),
-  condominiumAmount: decimal("condominium_amount", { precision: 10, scale: 2 }).default(sql`0`),
-  otherCharges: decimal("other_charges", { precision: 10, scale: 2 }).default(sql`0`),
-  
-  // NOVOS CAMPOS - IMPOSTOS
-  irValue: decimal("ir_value", { precision: 10, scale: 2 }).default(sql`0`),
-  ivaIbsValue: decimal("iva_ibs_value", { precision: 10, scale: 2 }).default(sql`0`),
-  
-  // NOVOS CAMPOS - TIPO DE RECIBO
-  receiptType: text("receipt_type").default("rent"), // 'rent', 'reimbursement', 'both'
 });
 
 export const insertPaymentSchema = createInsertSchema(payments).omit({
