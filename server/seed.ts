@@ -100,10 +100,6 @@ export async function seedDatabase() {
       rentValue: "2500.00",
       dueDay: 5,
       status: "active",
-      adminFeePercent: "10.00",
-      adjustmentIndex: "IGPM",
-      adjustmentPercent: null,
-      nextAdjustmentDate: `${year + 1}-01-01`,
     },
     {
       propertyId: createdProperties[1].id,
@@ -116,10 +112,6 @@ export async function seedDatabase() {
       rentValue: "3500.00",
       dueDay: 10,
       status: "active",
-      adminFeePercent: "8.00",
-      adjustmentIndex: "IPCA",
-      adjustmentPercent: null,
-      nextAdjustmentDate: `${year + 1}-01-15`,
     },
     {
       propertyId: createdProperties[2].id,
@@ -132,10 +124,6 @@ export async function seedDatabase() {
       rentValue: "5000.00",
       dueDay: 1,
       status: "active",
-      adminFeePercent: "5.00",
-      adjustmentIndex: "fixed",
-      adjustmentPercent: "5.00",
-      nextAdjustmentDate: `${year}-07-01`,
     },
     {
       propertyId: createdProperties[3].id,
@@ -148,10 +136,6 @@ export async function seedDatabase() {
       rentValue: "3200.00",
       dueDay: 15,
       status: "active",
-      adminFeePercent: "10.00",
-      adjustmentIndex: "IGPM",
-      adjustmentPercent: null,
-      nextAdjustmentDate: `${year + 1}-02-01`,
     },
     {
       propertyId: createdProperties[4].id,
@@ -164,10 +148,6 @@ export async function seedDatabase() {
       rentValue: "4200.00",
       dueDay: 20,
       status: "active",
-      adminFeePercent: "7.00",
-      adjustmentIndex: "IPCA",
-      adjustmentPercent: null,
-      nextAdjustmentDate: `${year + 1}-01-01`,
     },
   ];
 
